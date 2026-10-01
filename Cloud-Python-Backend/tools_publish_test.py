@@ -5,7 +5,7 @@ import time
 import paho.mqtt.client as mqtt
 
 from greenpulse.config import Config
-
+# ADA CAMPUS WARENG
 
 TELEMETRY_TOPIC = "greenpulse/device01/telemetry"
 
