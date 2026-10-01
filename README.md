@@ -301,7 +301,7 @@ The exact structure may evolve as the project is implemented.
 
 | Member | Student ID | Main Responsibility |
 |---|---|---|
-| **Janith Navida** | IT23355750 | ESP32, Sensors, Calibration & Local Device |
+| **Janith Navoda** | IT23355750 | ESP32, Sensors, Calibration & Local Device |
 | **Dewruwan Eranga** | IT23365278 | HiveMQ Cloud, MQTT & TLS Communication |
 | **Buvanaka Eranda** | IT23366190 | Python Backend, Oracle Cloud & AI Integration |
 | **Rahula Srimath** | IT23373648 | Node-RED Dashboard & User Interface |
