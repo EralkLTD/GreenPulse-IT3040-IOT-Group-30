@@ -1,42 +1,155 @@
-# 🌱 GreenPulse Backend
+# 🌱 GreenPulse
 
-Cloud backend for the **GreenPulse Smart IoT Plant-Care System**, developed for the **IT4030 – Internet of Things** project.
+**GreenPulse** is a smart IoT plant-care system developed for the **IT4030 – Internet of Things** module.
 
-This repository contains the Python backend responsible for receiving IoT sensor data through MQTT, processing contextual information, integrating with the Gemini API, and publishing plant-care recommendations for the Node-RED dashboard.
+The project implements the GreenPulse scenario provided as part of the university assignment. An **ESP32-based IoT device** collects plant and environmental measurements and communicates with cloud services through secure MQTT messaging. A cloud-hosted Python backend combines sensor readings with contextual information and uses an LLM to generate plant-care recommendations, which are presented through a Node-RED dashboard.
 
-## ⚙️ Backend Architecture
+---
+
+## 🏗️ System Architecture
 
 ```text
+                    ┌───────────────────────┐
+                    │       Sensors         │
+                    │ DHT11 | Soil | pH     │
+                    │       MQ-135          │
+                    └───────────┬───────────┘
+                                │
+                                ▼
+                         ┌─────────────┐
+                         │    ESP32    │
+                         └──────┬──────┘
+                                │
+                           MQTT / TLS
+                                │
+                                ▼
+                     ┌───────────────────┐
+                     │   HiveMQ Cloud    │
+                     │   MQTT Broker     │
+                     └─────────┬─────────┘
+                               │
+                               ▼
+                  ┌────────────────────────┐
+                  │     Python Backend     │
+                  │     Oracle Cloud       │
+                  └───────────┬────────────┘
+                              │
+                 ┌────────────┼─────────────┐
+                 │            │             │
+                 ▼            ▼             ▼
+              Gemini       Weather     Notification/
+                API          API           Email
+                 │            │             │
+                 └────────────┼─────────────┘
+                              │
+                              ▼
+                     Plant-Care Guidance
+                              │
+                              ▼
+                       HiveMQ Cloud
+                              │
+                              ▼
+                    ┌──────────────────┐
+                    │     Node-RED     │
+                    │    Dashboard     │
+                    └──────────────────┘
+```
+
+---
+
+## 🔧 Hardware
+
+The GreenPulse prototype uses:
+
+- **ESP32** – main IoT controller
+- **DHT11** – temperature and humidity sensing
+- **MD0751 Capacitive Soil Moisture Sensor** – soil-moisture monitoring
+- **MQ-135** – environmental gas-response monitoring
+- **pH Sensor** – pH measurement
+- **Local Display** – device-side information display
+- **RGB Indicator** – visual status indication
+
+Sensor values requiring calibration are calibrated and validated before being interpreted by the application.
+
+> The MQ-135 is treated as an environmental gas-response / air-quality-response sensor. Raw measurements are not assumed to represent precise AQI or CO₂ concentration without appropriate calibration.
+
+---
+
+## 💻 Technologies
+
+| Component | Technology |
+|---|---|
+| IoT Controller | ESP32 |
+| Device Programming | Arduino / C++ |
+| Communication | MQTT |
+| Transport Security | TLS |
+| MQTT Broker | HiveMQ Cloud |
+| Backend | Python |
+| Backend Hosting | Oracle Cloud Infrastructure |
+| AI / LLM | Gemini API |
+| Dashboard | Node-RED |
+| Data Format | JSON |
+| Local Backend Storage | SQLite |
+| Version Control | Git / GitHub |
+
+---
+
+## ✨ Main Features
+
+- Real-time plant and environmental monitoring
+- Temperature and humidity monitoring
+- Capacitive soil-moisture monitoring
+- pH monitoring
+- Environmental gas-response monitoring
+- Secure MQTT communication using TLS
+- Cloud-based MQTT broker
+- Python-based backend processing
+- Cloud deployment using Oracle Cloud Infrastructure
+- AI-generated plant-care recommendations
+- Weather context integration
+- Relevant email/notification context integration
+- Node-RED monitoring dashboard
+- User-selectable plant profiles
+- Local device display and RGB status indication
+- Backend data logging and error handling
+
+---
+
+## 🔄 Data Flow
+
+The basic GreenPulse data flow is:
+
+```text
+Sensors
+   ↓
 ESP32
    ↓
-HiveMQ Cloud (MQTT/TLS)
+HiveMQ Cloud
    ↓
 Python Backend
-   ├── Telemetry Validation
-   ├── Data Logging / Storage
-   ├── Plant Configuration
-   ├── Weather Context
-   ├── Notification Context
-   └── Gemini API
-          ↓
-   AI Recommendation
-          ↓
+   ↓
+Sensor Data + Plant Profile + Weather + Relevant Notification
+   ↓
+Gemini API
+   ↓
+Structured Plant-Care Recommendation
+   ↓
 HiveMQ Cloud
    ↓
 Node-RED Dashboard
 ```
 
-## 🛠️ Tech Stack
+The ESP32 is responsible for collecting sensor measurements and publishing them through MQTT.
 
-- **Python**
-- **HiveMQ Cloud**
-- **MQTT / TLS**
-- **Gemini API**
-- **Oracle Cloud Infrastructure**
-- **SQLite**
-- **JSON**
+The Python backend receives and validates the telemetry, combines it with contextual information, communicates with the Gemini API, and publishes the generated result back through MQTT.
 
-## 📡 MQTT Topics
+Node-RED provides the user-facing dashboard for monitoring the system and interacting with supported configuration options.
+
+---
+
+## 📡 MQTT Communication
+
+The current topic structure follows the pattern:
 
 ```text
 greenpulse/device01/telemetry
@@ -45,108 +158,196 @@ greenpulse/device01/ai
 greenpulse/device01/backend/status
 ```
 
-## 🚀 Local Setup
-
-### 1. Clone the repository
-
-```bash
-git clone <repository-url>
-cd <repository-name>
-```
-
-### 2. Create a virtual environment
-
-```bash
-python -m venv .venv
-```
-
-Windows:
-
-```powershell
-.\.venv\Scripts\Activate.ps1
-```
-
-Linux/macOS:
-
-```bash
-source .venv/bin/activate
-```
-
-### 3. Install dependencies
-
-```bash
-pip install -r requirements.txt
-```
-
-### 4. Configure environment variables
-
-Create `.env` from `.env.example`:
-
-```env
-MQTT_HOST=your-hivemq-host
-MQTT_PORT=8883
-MQTT_USERNAME=your-username
-MQTT_PASSWORD=your-password
-
-GEMINI_API_KEY=your-api-key
-GEMINI_MODEL=your-model
-```
-
-> ⚠️ Never commit the `.env` file or real API credentials to GitHub.
-
-### 5. Run the backend
-
-```bash
-python run.py
-```
-
-## 📦 Example Telemetry
+### Example Telemetry
 
 ```json
 {
   "device_id": "device01",
   "temperature": 29.8,
-  "humidity": 71,
-  "soil_moisture": 43,
+  "humidity": 71.0,
+  "soil_moisture": 43.0,
   "ph": 6.4,
   "mq135_raw": 1742
 }
 ```
 
-## 🧪 Development
+### Example Plant Configuration
 
-The backend can be tested without the physical ESP32 using the included fake telemetry publisher:
-
-```bash
-python tools_publish_test.py
+```json
+{
+  "plant_type": "Tomato"
+}
 ```
 
-Plant configuration can also be simulated using:
-
-```bash
-python tools_set_plant.py Tomato
-```
-
-## ☁️ Deployment
-
-The final backend is intended to run continuously on an **Oracle Cloud Infrastructure VM**.
-
-Development and testing are performed locally before cloud deployment.
-
-## 🔐 Security
-
-- MQTT communication uses TLS.
-- Credentials are stored using environment variables.
-- `.env` is excluded from Git.
-- External API failures are handled without stopping sensor-data processing.
-- Gemini provides plant-care guidance and does not directly control hardware.
-
-## 👨‍💻 Developer
-
-**Buvanaka Eranda**  
-IT23366190  
-Backend, Cloud & AI Integration
+The final topic configuration and communication parameters may be adjusted during system integration.
 
 ---
 
-**GreenPulse 🌱 | IT4030 – Internet of Things**
+## 🌿 Plant Profiles
+
+The dashboard can allow the user to select the plant being monitored.
+
+Example profiles include:
+
+- Tomato
+- Chilli
+- Basil
+- Mint
+
+The selected plant profile is sent through MQTT and used by the backend as additional context when generating plant-care guidance.
+
+---
+
+## 🤖 AI Processing
+
+The Python backend prepares a controlled context using information such as:
+
+```text
+Sensor Measurements
+        +
+Selected Plant
+        +
+Weather Context
+        +
+Relevant Plant-Care Notification
+        ↓
+     Gemini API
+        ↓
+Plant-Care Recommendation
+```
+
+The LLM is used to provide understandable plant-care guidance rather than to replace the underlying sensor measurements.
+
+If the AI service or another external API is temporarily unavailable, the system is designed so that sensor monitoring and MQTT communication can continue independently.
+
+---
+
+## 📊 Node-RED Dashboard
+
+The Node-RED dashboard provides the user interface for GreenPulse.
+
+It is intended to display:
+
+- Current sensor readings
+- Device/backend status
+- Selected plant profile
+- Plant-care recommendations
+- Relevant contextual information
+- System alerts or status indicators
+
+It also provides user interaction such as selecting the plant profile used by the backend.
+
+---
+
+## ☁️ Cloud Backend
+
+The GreenPulse Python backend is designed to run on an **Oracle Cloud Infrastructure VM**.
+
+Its responsibilities include:
+
+- Connecting securely to HiveMQ Cloud
+- Receiving MQTT telemetry
+- Validating incoming JSON
+- Storing/logging telemetry
+- Maintaining plant configuration
+- Retrieving external context
+- Communicating with the Gemini API
+- Handling external service failures
+- Publishing structured AI results
+- Providing backend status information
+
+Gemini itself is not hosted on Oracle Cloud. The Python application hosted on Oracle Cloud communicates with the Gemini API.
+
+---
+
+## 🔐 Security
+
+The project follows basic IoT and cloud security practices:
+
+- MQTT communication over TLS
+- Credentials stored outside source code
+- Environment variables for API keys and passwords
+- `.env` excluded from Git
+- `.env.example` used for configuration templates
+- Private keys and credentials excluded from the repository
+- Only relevant notification/email information provided to the AI service
+
+**Never commit real credentials, API keys, passwords, or private keys to this repository.**
+
+---
+
+## 📁 Repository Structure
+
+The repository is organized around the main GreenPulse components.
+
+```text
+GreenPulse/
+│
+├── esp32/              # ESP32 firmware and sensor integration
+├── backend/            # Python cloud backend
+├── node-red/           # Node-RED flows/dashboard
+├── docs/               # Project documentation
+│
+├── .gitignore
+├── README.md
+└── ...
+```
+
+The exact structure may evolve as the project is implemented.
+
+---
+
+## 👥 Team
+
+| Member | Student ID | Main Responsibility |
+|---|---|---|
+| **Janith Navida** | IT23355750 | ESP32, Sensors, Calibration & Local Device |
+| **Dewruwan Eranga** | IT23365278 | HiveMQ Cloud, MQTT & TLS Communication |
+| **Buvanaka Eranda** | IT23366190 | Python Backend, Oracle Cloud & AI Integration |
+| **Rahula Srimath** | IT23373648 | Node-RED Dashboard & User Interface |
+
+---
+
+## 🚧 Project Status
+
+GreenPulse is currently under development.
+
+Implementation is being carried out incrementally:
+
+```text
+Sensor Integration
+       ↓
+ESP32 Integration
+       ↓
+MQTT / HiveMQ
+       ↓
+Python Backend
+       ↓
+Node-RED Dashboard
+       ↓
+External Context
+       ↓
+Gemini Integration
+       ↓
+Oracle Cloud Deployment
+       ↓
+Full System Testing
+```
+
+Each component is tested independently before complete end-to-end integration.
+
+---
+
+## 🎓 Academic Project
+
+This repository contains work developed for:
+
+**IT4030 – Internet of Things**
+
+GreenPulse and the ESP32-based project scenario originate from the university assignment requirements. The repository contains our group's implementation of those requirements, including our selected sensors, cloud services, backend implementation, dashboard, integrations, and additional enhancements.
+
+---
+
+## 📌 Disclaimer
+
+GreenPulse is an academic prototype intended for IoT learning and experimentation. Sensor measurements and AI-generated plant-care recommendations should not be treated as laboratory-grade agricultural measurements or professional agricultural advice.
