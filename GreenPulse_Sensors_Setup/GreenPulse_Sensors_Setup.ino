@@ -4,46 +4,53 @@
 #include <Adafruit_SSD1306.h>
 
 // =====================================================
-// GreenPulse - Integrated Sensor Monitoring Firmware
+// GREENPULSE - COMPLETE HARDWARE TEST
 //
-// Hardware:
-// 1. DHT11 Temperature & Humidity Sensor
-// 2. Soil Moisture Sensor
-// 3. SSD1306 128x64 OLED
-// 4. RGB LED
-// 5. Push Button
+// Sensors:
+// 1. DHT11 Temperature
+// 2. DHT11 Humidity
+// 3. Soil Moisture
+// 4. MQ-135 Air Quality
 //
-// OLED pages:
-// 0 - Overall Status
-// 1 - Temperature
-// 2 - Humidity
-// 3 - Soil Moisture
+// Interface:
+// 5. SSD1306 OLED
+// 6. Push Button
+// 7. RGB Status LED
+//
+// OLED Screens:
+// 0 = Overall Status
+// 1 = Temperature
+// 2 = Humidity
+// 3 = Soil Moisture
+// 4 = Air Quality
+//
+// RGB:
+// GREEN = Normal
+// RED   = Attention
+// BLUE  = Sensor Error / Startup
 // =====================================================
 
 
 // =====================================================
-// PIN CONFIGURATION
+// PIN DEFINITIONS
 // =====================================================
 
-// DHT11
-#define DHTPIN 4
-#define DHTTYPE DHT11
+#define MQ135_PIN 3
 
-// Soil moisture
+#define DHT_PIN 4
+#define DHT_TYPE DHT11
+
 #define SOIL_PIN 5
 
-// Push button
 #define BUTTON_PIN 7
 
-// OLED I2C
 #define SDA_PIN 8
 #define SCL_PIN 9
 
-// RGB LED
-// IMPORTANT:
-// Keep this GPIO set to the pin you already used successfully
-// for your LED test.
-#define LED_PIN 6
+// Confirmed RGB mapping
+#define BLUE_PIN  10
+#define GREEN_PIN 11
+#define RED_PIN   12
 
 
 // =====================================================
@@ -64,10 +71,10 @@ Adafruit_SSD1306 display(
 
 
 // =====================================================
-// DHT OBJECT
+// DHT
 // =====================================================
 
-DHT dht(DHTPIN, DHTTYPE);
+DHT dht(DHT_PIN, DHT_TYPE);
 
 
 // =====================================================
@@ -76,7 +83,9 @@ DHT dht(DHTPIN, DHTTYPE);
 
 float temperature = 0.0;
 float humidity = 0.0;
+
 int soilRaw = 0;
+int airRaw = 0;
 
 bool dhtValid = false;
 
@@ -85,10 +94,8 @@ bool dhtValid = false;
 // TEMPORARY THRESHOLDS
 // =====================================================
 //
-// These are TEST thresholds.
-// Soil threshold MUST be calibrated later.
-//
-// Change these after collecting real sensor data.
+// These are only TEST thresholds.
+// We will calibrate them later.
 // =====================================================
 
 const float TEMP_LOW = 20.0;
@@ -97,15 +104,7 @@ const float TEMP_HIGH = 35.0;
 const float HUMIDITY_LOW = 40.0;
 const float HUMIDITY_HIGH = 85.0;
 
-// TEMPORARY soil threshold.
-//
-// Your sensor previously showed high RAW values when dry.
-// Therefore:
-//
-// Higher RAW = drier
-//
-// This value is NOT final.
-//
+// Higher soil reading currently means drier
 const int SOIL_DRY_THRESHOLD = 3000;
 
 
@@ -124,11 +123,7 @@ const unsigned long debounceDelay = 50;
 
 
 // =====================================================
-// SENSOR TIMING
-// =====================================================
-//
-// DHT11 should not be read continuously.
-// Read sensors every 2 seconds.
+// SENSOR UPDATE TIMER
 // =====================================================
 
 unsigned long lastSensorRead = 0;
@@ -141,14 +136,24 @@ const unsigned long sensorInterval = 2000;
 // =====================================================
 
 void readSensors();
+
 void handleButton();
+
 void updateDisplay();
-void updateLED();
 
 void showStatusScreen();
 void showTemperatureScreen();
 void showHumidityScreen();
 void showSoilScreen();
+void showAirQualityScreen();
+
+void updateRGB();
+
+void setRGB(
+  bool red,
+  bool green,
+  bool blue
+);
 
 
 // =====================================================
@@ -159,74 +164,157 @@ void setup() {
 
   // ---------------------------------------------------
   // IMPORTANT:
-  // No Serial.begin() here.
+  // No Serial Monitor required.
   //
-  // The device operates completely independently
-  // from Arduino Serial Monitor.
+  // This avoids the button issue we previously had.
   // ---------------------------------------------------
 
 
-  // Push button
-  pinMode(BUTTON_PIN, INPUT_PULLUP);
+  // Button
+  pinMode(
+    BUTTON_PIN,
+    INPUT_PULLUP
+  );
 
 
-  // LED
-  pinMode(LED_PIN, OUTPUT);
+  // ADC inputs
+  pinMode(
+    MQ135_PIN,
+    INPUT
+  );
 
-  digitalWrite(LED_PIN, LOW);
+  pinMode(
+    SOIL_PIN,
+    INPUT
+  );
+
+
+  // RGB
+  pinMode(
+    RED_PIN,
+    OUTPUT
+  );
+
+  pinMode(
+    GREEN_PIN,
+    OUTPUT
+  );
+
+  pinMode(
+    BLUE_PIN,
+    OUTPUT
+  );
+
+
+  // LED OFF
+  setRGB(
+    false,
+    false,
+    false
+  );
 
 
   // Start DHT11
   dht.begin();
 
 
-  // ESP32 ADC
+  // 12-bit ESP32 ADC
   analogReadResolution(12);
 
 
   // Start I2C
-  Wire.begin(SDA_PIN, SCL_PIN);
+  Wire.begin(
+    SDA_PIN,
+    SCL_PIN
+  );
 
 
-  // Start OLED
+  // ===================================================
+  // OLED INITIALIZATION
+  // ===================================================
+
   if (!display.begin(
         SSD1306_SWITCHCAPVCC,
         SCREEN_ADDRESS)) {
 
-    // OLED initialization failed
+    // OLED failure
+    // Flash BLUE forever
+
     while (true) {
 
-      // Flash LED to indicate hardware error
-      digitalWrite(LED_PIN, HIGH);
-      delay(200);
+      setRGB(
+        false,
+        false,
+        true
+      );
 
-      digitalWrite(LED_PIN, LOW);
-      delay(200);
+      delay(300);
+
+      setRGB(
+        false,
+        false,
+        false
+      );
+
+      delay(300);
     }
   }
 
 
-  // ---------------------------------------------------
-  // Startup screen
-  // ---------------------------------------------------
+  // ===================================================
+  // STARTUP SCREEN
+  // ===================================================
 
   display.clearDisplay();
 
-  display.setTextColor(SSD1306_WHITE);
+  display.setTextColor(
+    SSD1306_WHITE
+  );
+
 
   display.setTextSize(2);
-  display.setCursor(5, 10);
-  display.println("GreenPulse");
+
+  display.setCursor(
+    5,
+    8
+  );
+
+  display.println(
+    "GreenPulse"
+  );
+
 
   display.setTextSize(1);
 
-  display.setCursor(20, 40);
-  display.println("Sensor System");
+  display.setCursor(
+    20,
+    37
+  );
 
-  display.setCursor(30, 52);
-  display.println("Starting...");
+  display.println(
+    "Sensor System"
+  );
+
+
+  display.setCursor(
+    23,
+    51
+  );
+
+  display.println(
+    "Starting..."
+  );
+
 
   display.display();
+
+
+  // BLUE during startup
+  setRGB(
+    false,
+    false,
+    true
+  );
 
 
   delay(1500);
@@ -235,9 +323,13 @@ void setup() {
   // First sensor reading
   readSensors();
 
-  updateLED();
+  updateRGB();
 
   updateDisplay();
+
+
+  // Start timer from here
+  lastSensorRead = millis();
 }
 
 
@@ -247,114 +339,300 @@ void setup() {
 
 void loop() {
 
-  // Handle button continuously
+  // Check button continuously
   handleButton();
 
 
-  // ---------------------------------------------------
   // Read sensors every 2 seconds
-  // ---------------------------------------------------
+  if (
+    millis() - lastSensorRead
+    >= sensorInterval
+  ) {
 
-  if (millis() - lastSensorRead >= sensorInterval) {
+    lastSensorRead =
+      millis();
 
-    lastSensorRead = millis();
 
     readSensors();
 
-    updateLED();
+
+    updateRGB();
+
 
     updateDisplay();
   }
 
 
-  // Prevent unnecessary CPU spinning
+  // Very small delay only
   delay(1);
 }
 
 
 // =====================================================
-// READ SENSORS
+// READ ALL SENSORS
 // =====================================================
 
 void readSensors() {
 
+  // ===================================================
   // DHT11
-  float newHumidity = dht.readHumidity();
-  float newTemperature = dht.readTemperature();
+  // ===================================================
+
+  float newHumidity =
+    dht.readHumidity();
 
 
-  // Check DHT reading
-  if (!isnan(newTemperature) &&
-      !isnan(newHumidity)) {
+  float newTemperature =
+    dht.readTemperature();
 
-    temperature = newTemperature;
-    humidity = newHumidity;
 
-    dhtValid = true;
+  if (
+    !isnan(newTemperature) &&
+    !isnan(newHumidity)
+  ) {
+
+    temperature =
+      newTemperature;
+
+    humidity =
+      newHumidity;
+
+    dhtValid =
+      true;
 
   } else {
 
-    dhtValid = false;
+    dhtValid =
+      false;
   }
 
 
-  // Soil moisture
-  soilRaw = analogRead(SOIL_PIN);
+  // ===================================================
+  // SOIL MOISTURE
+  // ===================================================
+
+  soilRaw =
+    analogRead(SOIL_PIN);
+
+
+  // ===================================================
+  // MQ-135
+  // ===================================================
+
+  // Average several readings to make
+  // the displayed value less jumpy.
+
+  long mqTotal = 0;
+
+  const int mqSamples = 10;
+
+
+  for (
+    int i = 0;
+    i < mqSamples;
+    i++
+  ) {
+
+    mqTotal +=
+      analogRead(MQ135_PIN);
+
+    delay(2);
+  }
+
+
+  airRaw =
+    mqTotal / mqSamples;
 }
 
 
 // =====================================================
-// BUTTON HANDLING
+// BUTTON HANDLER
 // =====================================================
 
 void handleButton() {
 
-  bool reading = digitalRead(BUTTON_PIN);
+  bool reading =
+    digitalRead(BUTTON_PIN);
 
 
-  // Detect electrical state change
-  if (reading != lastButtonReading) {
+  // Button changed
+  if (
+    reading !=
+    lastButtonReading
+  ) {
 
-    lastDebounceTime = millis();
+    lastDebounceTime =
+      millis();
   }
 
 
-  // Wait until button becomes stable
-  if ((millis() - lastDebounceTime) >
-      debounceDelay) {
+  // Debounce
+  if (
+    millis() - lastDebounceTime
+    > debounceDelay
+  ) {
 
-    if (reading != stableButtonState) {
+    if (
+      reading !=
+      stableButtonState
+    ) {
 
-      stableButtonState = reading;
+      stableButtonState =
+        reading;
 
 
-      // INPUT_PULLUP means:
-      //
-      // HIGH = released
-      // LOW  = pressed
-
-      if (stableButtonState == LOW) {
+      // Button pressed
+      if (
+        stableButtonState == LOW
+      ) {
 
         currentScreen++;
 
 
-        // Four screens:
-        // 0, 1, 2, 3
-
-        if (currentScreen > 3) {
+        // 5 screens
+        if (
+          currentScreen > 4
+        ) {
 
           currentScreen = 0;
         }
 
 
-        // Immediately update OLED
+        // Immediately redraw OLED
         updateDisplay();
       }
     }
   }
 
 
-  lastButtonReading = reading;
+  lastButtonReading =
+    reading;
+}
+
+
+// =====================================================
+// RGB STATUS
+// =====================================================
+
+void updateRGB() {
+
+  // ===================================================
+  // BLUE = DHT SENSOR ERROR
+  // ===================================================
+
+  if (!dhtValid) {
+
+    setRGB(
+      false,
+      false,
+      true
+    );
+
+    return;
+  }
+
+
+  // ===================================================
+  // CHECK CURRENT CONDITIONS
+  // ===================================================
+
+  bool tempProblem =
+
+    temperature < TEMP_LOW ||
+
+    temperature > TEMP_HIGH;
+
+
+  bool humidityProblem =
+
+    humidity < HUMIDITY_LOW ||
+
+    humidity > HUMIDITY_HIGH;
+
+
+  bool soilProblem =
+
+    soilRaw >
+    SOIL_DRY_THRESHOLD;
+
+
+  // ===================================================
+  // IMPORTANT:
+  //
+  // MQ-135 is NOT used to trigger RED yet.
+  //
+  // We need to establish its baseline/calibration
+  // before deciding what RAW value means bad air.
+  // ===================================================
+
+
+  // RED = Attention required
+
+  if (
+    tempProblem ||
+    humidityProblem ||
+    soilProblem
+  ) {
+
+    setRGB(
+      true,
+      false,
+      false
+    );
+
+    return;
+  }
+
+
+  // GREEN = current calibrated/test
+  // conditions are normal
+
+  setRGB(
+    false,
+    true,
+    false
+  );
+}
+
+
+// =====================================================
+// RGB OUTPUT
+// =====================================================
+//
+// Your LED is currently wired as common cathode:
+//
+// HIGH = ON
+// LOW  = OFF
+//
+// Confirmed mapping:
+//
+// GPIO 12 = RED
+// GPIO 11 = GREEN
+// GPIO 10 = BLUE
+// =====================================================
+
+void setRGB(
+  bool red,
+  bool green,
+  bool blue
+) {
+
+  digitalWrite(
+    RED_PIN,
+    red ? HIGH : LOW
+  );
+
+
+  digitalWrite(
+    GREEN_PIN,
+    green ? HIGH : LOW
+  );
+
+
+  digitalWrite(
+    BLUE_PIN,
+    blue ? HIGH : LOW
+  );
 }
 
 
@@ -392,6 +670,13 @@ void updateDisplay() {
       showSoilScreen();
 
       break;
+
+
+    case 4:
+
+      showAirQualityScreen();
+
+      break;
   }
 }
 
@@ -405,17 +690,32 @@ void showStatusScreen() {
 
   display.clearDisplay();
 
-  display.setTextColor(SSD1306_WHITE);
+  display.setTextColor(
+    SSD1306_WHITE
+  );
 
 
   // Header
   display.setTextSize(1);
 
-  display.setCursor(0, 0);
-  display.print("GreenPulse");
+  display.setCursor(
+    0,
+    0
+  );
 
-  display.setCursor(92, 0);
-  display.print("STATUS");
+  display.print(
+    "GreenPulse"
+  );
+
+
+  display.setCursor(
+    92,
+    0
+  );
+
+  display.print(
+    "STATUS"
+  );
 
 
   display.drawLine(
@@ -427,22 +727,34 @@ void showStatusScreen() {
   );
 
 
-  // ---------------------------------------------------
-  // Sensor error
-  // ---------------------------------------------------
+  // ===================================================
+  // DHT ERROR
+  // ===================================================
 
   if (!dhtValid) {
 
     display.setTextSize(2);
 
-    display.setCursor(15, 18);
-    display.println("ERROR");
+    display.setCursor(
+      30,
+      18
+    );
+
+    display.println(
+      "ERROR"
+    );
 
 
     display.setTextSize(1);
 
-    display.setCursor(10, 45);
-    display.println("Check DHT11");
+    display.setCursor(
+      24,
+      45
+    );
+
+    display.println(
+      "DHT11 ERROR"
+    );
 
 
     display.display();
@@ -451,12 +763,13 @@ void showStatusScreen() {
   }
 
 
-  // ---------------------------------------------------
-  // Determine problems
-  // ---------------------------------------------------
+  // ===================================================
+  // CHECK CONDITIONS
+  // ===================================================
 
   bool tempLow =
     temperature < TEMP_LOW;
+
 
   bool tempHigh =
     temperature > TEMP_HIGH;
@@ -465,102 +778,178 @@ void showStatusScreen() {
   bool humidityLow =
     humidity < HUMIDITY_LOW;
 
+
   bool humidityHigh =
     humidity > HUMIDITY_HIGH;
 
 
   bool soilDry =
-    soilRaw > SOIL_DRY_THRESHOLD;
+    soilRaw >
+    SOIL_DRY_THRESHOLD;
 
 
   bool allGood =
+
     !tempLow &&
+
     !tempHigh &&
+
     !humidityLow &&
+
     !humidityHigh &&
+
     !soilDry;
 
 
-  // ---------------------------------------------------
-  // GOOD STATUS
-  // ---------------------------------------------------
+  // ===================================================
+  // GOOD
+  // ===================================================
 
   if (allGood) {
 
     display.setTextSize(2);
 
-    display.setCursor(32, 18);
-    display.println("GOOD");
+    display.setCursor(
+      32,
+      18
+    );
+
+    display.println(
+      "GOOD"
+    );
 
 
     display.setTextSize(1);
 
-    display.setCursor(17, 43);
-    display.println("All parameters");
+    display.setCursor(
+      17,
+      42
+    );
 
-    display.setCursor(32, 53);
-    display.println("normal");
+    display.println(
+      "All parameters"
+    );
+
+
+    display.setCursor(
+      32,
+      53
+    );
+
+    display.println(
+      "normal"
+    );
   }
 
 
-  // ---------------------------------------------------
-  // ATTENTION STATUS
-  // ---------------------------------------------------
+  // ===================================================
+  // ATTENTION
+  // ===================================================
 
   else {
 
     display.setTextSize(2);
 
-    display.setCursor(10, 14);
-    display.println("ATTENTION");
+    display.setCursor(
+      10,
+      14
+    );
+
+    display.println(
+      "ATTENTION"
+    );
 
 
     display.setTextSize(1);
 
-
     int y = 36;
 
 
-    if (tempLow) {
+    if (
+      tempLow &&
+      y <= 56
+    ) {
 
-      display.setCursor(0, y);
-      display.println("Temperature: LOW");
+      display.setCursor(
+        0,
+        y
+      );
 
-      y += 10;
-    }
-
-
-    if (tempHigh) {
-
-      display.setCursor(0, y);
-      display.println("Temperature: HIGH");
-
-      y += 10;
-    }
-
-
-    if (humidityLow) {
-
-      display.setCursor(0, y);
-      display.println("Humidity: LOW");
+      display.println(
+        "Temperature: LOW"
+      );
 
       y += 10;
     }
 
 
-    if (humidityHigh) {
+    if (
+      tempHigh &&
+      y <= 56
+    ) {
 
-      display.setCursor(0, y);
-      display.println("Humidity: HIGH");
+      display.setCursor(
+        0,
+        y
+      );
+
+      display.println(
+        "Temperature: HIGH"
+      );
 
       y += 10;
     }
 
 
-    if (soilDry && y <= 56) {
+    if (
+      humidityLow &&
+      y <= 56
+    ) {
 
-      display.setCursor(0, y);
-      display.println("Soil: DRY");
+      display.setCursor(
+        0,
+        y
+      );
+
+      display.println(
+        "Humidity: LOW"
+      );
+
+      y += 10;
+    }
+
+
+    if (
+      humidityHigh &&
+      y <= 56
+    ) {
+
+      display.setCursor(
+        0,
+        y
+      );
+
+      display.println(
+        "Humidity: HIGH"
+      );
+
+      y += 10;
+    }
+
+
+    if (
+      soilDry &&
+      y <= 56
+    ) {
+
+      display.setCursor(
+        0,
+        y
+      );
+
+      display.println(
+        "Soil: DRY"
+      );
     }
   }
 
@@ -578,13 +967,21 @@ void showTemperatureScreen() {
 
   display.clearDisplay();
 
-  display.setTextColor(SSD1306_WHITE);
+  display.setTextColor(
+    SSD1306_WHITE
+  );
 
 
   display.setTextSize(1);
 
-  display.setCursor(32, 0);
-  display.println("GreenPulse");
+  display.setCursor(
+    32,
+    0
+  );
+
+  display.println(
+    "GreenPulse"
+  );
 
 
   display.drawLine(
@@ -596,44 +993,78 @@ void showTemperatureScreen() {
   );
 
 
-  display.setCursor(28, 16);
-  display.println("TEMPERATURE");
+  display.setCursor(
+    28,
+    16
+  );
+
+  display.println(
+    "TEMPERATURE"
+  );
 
 
   if (!dhtValid) {
 
     display.setTextSize(2);
 
-    display.setCursor(30, 32);
-    display.println("ERROR");
+    display.setCursor(
+      30,
+      32
+    );
+
+    display.println(
+      "ERROR"
+    );
 
   } else {
 
     display.setTextSize(2);
 
-    display.setCursor(22, 31);
+    display.setCursor(
+      22,
+      31
+    );
 
-    display.print(temperature, 1);
 
-    display.print(" C");
+    display.print(
+      temperature,
+      1
+    );
+
+    display.print(
+      " C"
+    );
 
 
     display.setTextSize(1);
 
-    display.setCursor(38, 53);
+    display.setCursor(
+      38,
+      53
+    );
 
 
-    if (temperature < TEMP_LOW) {
+    if (
+      temperature < TEMP_LOW
+    ) {
 
-      display.print("LOW");
+      display.print(
+        "LOW"
+      );
 
-    } else if (temperature > TEMP_HIGH) {
+    } else if (
+      temperature > TEMP_HIGH
+    ) {
 
-      display.print("HIGH");
+      display.print(
+        "HIGH"
+      );
 
     } else {
 
-      display.print("NORMAL");
+      display.print(
+        "NORMAL"
+      );
     }
   }
 
@@ -651,13 +1082,21 @@ void showHumidityScreen() {
 
   display.clearDisplay();
 
-  display.setTextColor(SSD1306_WHITE);
+  display.setTextColor(
+    SSD1306_WHITE
+  );
 
 
   display.setTextSize(1);
 
-  display.setCursor(32, 0);
-  display.println("GreenPulse");
+  display.setCursor(
+    32,
+    0
+  );
+
+  display.println(
+    "GreenPulse"
+  );
 
 
   display.drawLine(
@@ -669,44 +1108,78 @@ void showHumidityScreen() {
   );
 
 
-  display.setCursor(37, 16);
-  display.println("HUMIDITY");
+  display.setCursor(
+    37,
+    16
+  );
+
+  display.println(
+    "HUMIDITY"
+  );
 
 
   if (!dhtValid) {
 
     display.setTextSize(2);
 
-    display.setCursor(30, 32);
-    display.println("ERROR");
+    display.setCursor(
+      30,
+      32
+    );
+
+    display.println(
+      "ERROR"
+    );
 
   } else {
 
     display.setTextSize(2);
 
-    display.setCursor(22, 31);
+    display.setCursor(
+      22,
+      31
+    );
 
-    display.print(humidity, 1);
 
-    display.print(" %");
+    display.print(
+      humidity,
+      1
+    );
+
+    display.print(
+      " %"
+    );
 
 
     display.setTextSize(1);
 
-    display.setCursor(38, 53);
+    display.setCursor(
+      38,
+      53
+    );
 
 
-    if (humidity < HUMIDITY_LOW) {
+    if (
+      humidity < HUMIDITY_LOW
+    ) {
 
-      display.print("LOW");
+      display.print(
+        "LOW"
+      );
 
-    } else if (humidity > HUMIDITY_HIGH) {
+    } else if (
+      humidity > HUMIDITY_HIGH
+    ) {
 
-      display.print("HIGH");
+      display.print(
+        "HIGH"
+      );
 
     } else {
 
-      display.print("NORMAL");
+      display.print(
+        "NORMAL"
+      );
     }
   }
 
@@ -724,13 +1197,21 @@ void showSoilScreen() {
 
   display.clearDisplay();
 
-  display.setTextColor(SSD1306_WHITE);
+  display.setTextColor(
+    SSD1306_WHITE
+  );
 
 
   display.setTextSize(1);
 
-  display.setCursor(32, 0);
-  display.println("GreenPulse");
+  display.setCursor(
+    32,
+    0
+  );
+
+  display.println(
+    "GreenPulse"
+  );
 
 
   display.drawLine(
@@ -742,29 +1223,51 @@ void showSoilScreen() {
   );
 
 
-  display.setCursor(24, 16);
-  display.println("SOIL MOISTURE");
+  display.setCursor(
+    24,
+    16
+  );
+
+  display.println(
+    "SOIL MOISTURE"
+  );
 
 
   display.setTextSize(2);
 
-  display.setCursor(32, 31);
+  display.setCursor(
+    32,
+    31
+  );
 
-  display.println(soilRaw);
+
+  display.println(
+    soilRaw
+  );
 
 
   display.setTextSize(1);
 
-  display.setCursor(38, 53);
+  display.setCursor(
+    38,
+    53
+  );
 
 
-  if (soilRaw > SOIL_DRY_THRESHOLD) {
+  if (
+    soilRaw >
+    SOIL_DRY_THRESHOLD
+  ) {
 
-    display.print("DRY");
+    display.print(
+      "DRY"
+    );
 
   } else {
 
-    display.print("OK");
+    display.print(
+      "OK"
+    );
   }
 
 
@@ -773,53 +1276,75 @@ void showSoilScreen() {
 
 
 // =====================================================
-// LED STATUS
+// SCREEN 4
+// MQ-135 AIR QUALITY
 // =====================================================
 
-void updateLED() {
+void showAirQualityScreen() {
 
-  // For now we use the connected LED channel
-  // as an attention indicator.
+  display.clearDisplay();
 
-  bool problem = false;
-
-
-  if (!dhtValid) {
-
-    problem = true;
-
-  } else {
-
-    if (temperature < TEMP_LOW ||
-        temperature > TEMP_HIGH) {
-
-      problem = true;
-    }
+  display.setTextColor(
+    SSD1306_WHITE
+  );
 
 
-    if (humidity < HUMIDITY_LOW ||
-        humidity > HUMIDITY_HIGH) {
+  display.setTextSize(1);
 
-      problem = true;
-    }
+  display.setCursor(
+    32,
+    0
+  );
 
-
-    if (soilRaw > SOIL_DRY_THRESHOLD) {
-
-      problem = true;
-    }
-  }
+  display.println(
+    "GreenPulse"
+  );
 
 
-  // LED ON = attention required
-  // LED OFF = normal
+  display.drawLine(
+    0,
+    10,
+    127,
+    10,
+    SSD1306_WHITE
+  );
 
-  if (problem) {
 
-    digitalWrite(LED_PIN, HIGH);
+  display.setCursor(
+    30,
+    16
+  );
 
-  } else {
+  display.println(
+    "AIR QUALITY"
+  );
 
-    digitalWrite(LED_PIN, LOW);
-  }
+
+  display.setTextSize(2);
+
+  display.setCursor(
+    32,
+    30
+  );
+
+
+  display.println(
+    airRaw
+  );
+
+
+  display.setTextSize(1);
+
+  display.setCursor(
+    22,
+    53
+  );
+
+
+  display.print(
+    "MQ-135 RAW"
+  );
+
+
+  display.display();
 }
