@@ -1,33 +1,34 @@
 #include <Wire.h>
 #include <DHT.h>
+#include <OneWire.h>
+#include <DallasTemperature.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
 
 // =====================================================
-// GREENPULSE - COMPLETE HARDWARE TEST
+// GREENPULSE - COMPLETE SENSOR TEST
+// =====================================================
 //
-// Sensors:
-// 1. DHT11 Temperature
-// 2. DHT11 Humidity
-// 3. Soil Moisture
-// 4. MQ-135 Air Quality
+// DHT11:
+//   Air Temperature + Humidity
 //
-// Interface:
-// 5. SSD1306 OLED
-// 6. Push Button
-// 7. RGB Status LED
+// Soil Moisture:
+//   RAW + estimated percentage
 //
-// OLED Screens:
-// 0 = Overall Status
-// 1 = Temperature
-// 2 = Humidity
-// 3 = Soil Moisture
-// 4 = Air Quality
+// LDR:
+//   BRIGHT / DARK
+//
+// DS18B20:
+//   Soil / probe temperature
+//
+// OLED:
+//   6 screens
 //
 // RGB:
-// GREEN = Normal
-// RED   = Attention
-// BLUE  = Sensor Error / Startup
+//   GREEN = Normal
+//   RED   = Attention
+//   BLUE  = Sensor error
+//
 // =====================================================
 
 
@@ -35,26 +36,27 @@
 // PIN DEFINITIONS
 // =====================================================
 
-#define MQ135_PIN 3
-
 #define DHT_PIN 4
 #define DHT_TYPE DHT11
 
 #define SOIL_PIN 5
+
+#define LDR_PIN 6
 
 #define BUTTON_PIN 7
 
 #define SDA_PIN 8
 #define SCL_PIN 9
 
-// Confirmed RGB mapping
 #define BLUE_PIN  10
 #define GREEN_PIN 11
 #define RED_PIN   12
 
+#define DS18B20_PIN 13
+
 
 // =====================================================
-// OLED CONFIGURATION
+// OLED
 // =====================================================
 
 #define SCREEN_WIDTH 128
@@ -71,48 +73,115 @@ Adafruit_SSD1306 display(
 
 
 // =====================================================
-// DHT
+// DHT11
 // =====================================================
 
-DHT dht(DHT_PIN, DHT_TYPE);
+DHT dht(
+  DHT_PIN,
+  DHT_TYPE
+);
+
+
+// =====================================================
+// DS18B20
+// =====================================================
+
+OneWire oneWire(
+  DS18B20_PIN
+);
+
+DallasTemperature ds18b20(
+  &oneWire
+);
 
 
 // =====================================================
 // SENSOR VALUES
 // =====================================================
 
-float temperature = 0.0;
+float airTemperature = 0.0;
 float humidity = 0.0;
 
+float soilTemperature = 0.0;
+
 int soilRaw = 0;
-int airRaw = 0;
+int soilPercent = 0;
+
+int ldrValue = 0;
 
 bool dhtValid = false;
+bool ds18b20Valid = false;
 
 
 // =====================================================
-// TEMPORARY THRESHOLDS
-// =====================================================
-//
-// These are only TEST thresholds.
-// We will calibrate them later.
+// AIR TEMPERATURE THRESHOLDS
 // =====================================================
 
-const float TEMP_LOW = 20.0;
-const float TEMP_HIGH = 35.0;
+const float AIR_TEMP_LOW = 20.0;
+const float AIR_TEMP_HIGH = 35.0;
+
+
+// =====================================================
+// HUMIDITY THRESHOLDS
+// =====================================================
 
 const float HUMIDITY_LOW = 40.0;
 const float HUMIDITY_HIGH = 85.0;
 
-// Higher soil reading currently means drier
-const int SOIL_DRY_THRESHOLD = 3000;
+
+// =====================================================
+// SOIL TEMPERATURE THRESHOLDS
+// =====================================================
+//
+// Temporary general test values.
+// Crop-specific thresholds can be added later.
+//
+
+const float SOIL_TEMP_LOW = 15.0;
+const float SOIL_TEMP_HIGH = 35.0;
 
 
 // =====================================================
-// BUTTON VARIABLES
+// SOIL MOISTURE CALIBRATION
+// =====================================================
+//
+// IMPORTANT:
+//
+// These are temporary values.
+//
+// Later replace these with YOUR measured:
+//
+// SOIL_DRY_VALUE
+// SOIL_WET_VALUE
+//
+// =====================================================
+
+const int SOIL_DRY_VALUE = 4095;
+const int SOIL_WET_VALUE = 1500;
+
+const int SOIL_DRY_PERCENT = 30;
+const int SOIL_WET_PERCENT = 80;
+
+
+// =====================================================
+// OLED SCREEN
+// =====================================================
+//
+// 0 = Overall
+// 1 = Air Temperature
+// 2 = Humidity
+// 3 = Soil Moisture
+// 4 = Light
+// 5 = Soil Temperature
+//
 // =====================================================
 
 int currentScreen = 0;
+
+
+// =====================================================
+// BUTTON
+// =====================================================
 
 bool lastButtonReading = HIGH;
 bool stableButtonState = HIGH;
@@ -123,7 +192,7 @@ const unsigned long debounceDelay = 50;
 
 
 // =====================================================
-// SENSOR UPDATE TIMER
+// SENSOR TIMER
 // =====================================================
 
 unsigned long lastSensorRead = 0;
@@ -141,12 +210,6 @@ void handleButton();
 
 void updateDisplay();
 
-void showStatusScreen();
-void showTemperatureScreen();
-void showHumidityScreen();
-void showSoilScreen();
-void showAirQualityScreen();
-
 void updateRGB();
 
 void setRGB(
@@ -154,6 +217,18 @@ void setRGB(
   bool green,
   bool blue
 );
+
+void showStatusScreen();
+
+void showAirTemperatureScreen();
+
+void showHumidityScreen();
+
+void showSoilMoistureScreen();
+
+void showLightScreen();
+
+void showSoilTemperatureScreen();
 
 
 // =====================================================
@@ -163,33 +238,37 @@ void setRGB(
 void setup() {
 
   // ---------------------------------------------------
-  // IMPORTANT:
-  // No Serial Monitor required.
-  //
-  // This avoids the button issue we previously had.
+  // BUTTON
   // ---------------------------------------------------
 
-
-  // Button
   pinMode(
     BUTTON_PIN,
     INPUT_PULLUP
   );
 
 
-  // ADC inputs
-  pinMode(
-    MQ135_PIN,
-    INPUT
-  );
+  // ---------------------------------------------------
+  // SENSOR INPUTS
+  // ---------------------------------------------------
 
   pinMode(
     SOIL_PIN,
     INPUT
   );
 
+  pinMode(
+    LDR_PIN,
+    INPUT
+  );
 
+
+  analogReadResolution(12);
+
+
+  // ---------------------------------------------------
   // RGB
+  // ---------------------------------------------------
+
   pinMode(
     RED_PIN,
     OUTPUT
@@ -206,7 +285,6 @@ void setup() {
   );
 
 
-  // LED OFF
   setRGB(
     false,
     false,
@@ -214,31 +292,36 @@ void setup() {
   );
 
 
-  // Start DHT11
+  // ---------------------------------------------------
+  // START DHT11
+  // ---------------------------------------------------
+
   dht.begin();
 
 
-  // 12-bit ESP32 ADC
-  analogReadResolution(12);
+  // ---------------------------------------------------
+  // START DS18B20
+  // ---------------------------------------------------
+
+  ds18b20.begin();
 
 
-  // Start I2C
+  // ---------------------------------------------------
+  // START OLED
+  // ---------------------------------------------------
+
   Wire.begin(
     SDA_PIN,
     SCL_PIN
   );
 
 
-  // ===================================================
-  // OLED INITIALIZATION
-  // ===================================================
-
   if (!display.begin(
         SSD1306_SWITCHCAPVCC,
         SCREEN_ADDRESS)) {
 
-    // OLED failure
-    // Flash BLUE forever
+    // OLED error
+    // Flash BLUE LED
 
     while (true) {
 
@@ -249,6 +332,7 @@ void setup() {
       );
 
       delay(300);
+
 
       setRGB(
         false,
@@ -288,16 +372,16 @@ void setup() {
 
   display.setCursor(
     20,
-    37
+    36
   );
 
   display.println(
-    "Sensor System"
+    "Monitoring System"
   );
 
 
   display.setCursor(
-    23,
+    30,
     51
   );
 
@@ -310,6 +394,7 @@ void setup() {
 
 
   // BLUE during startup
+
   setRGB(
     false,
     false,
@@ -320,7 +405,10 @@ void setup() {
   delay(1500);
 
 
-  // First sensor reading
+  // ===================================================
+  // FIRST READING
+  // ===================================================
+
   readSensors();
 
   updateRGB();
@@ -328,22 +416,24 @@ void setup() {
   updateDisplay();
 
 
-  // Start timer from here
-  lastSensorRead = millis();
+  lastSensorRead =
+    millis();
 }
 
 
 // =====================================================
-// MAIN LOOP
+// LOOP
 // =====================================================
 
 void loop() {
 
-  // Check button continuously
+  // Button remains responsive
+
   handleButton();
 
 
   // Read sensors every 2 seconds
+
   if (
     millis() - lastSensorRead
     >= sensorInterval
@@ -355,15 +445,12 @@ void loop() {
 
     readSensors();
 
-
     updateRGB();
-
 
     updateDisplay();
   }
 
 
-  // Very small delay only
   delay(1);
 }
 
@@ -378,29 +465,33 @@ void readSensors() {
   // DHT11
   // ===================================================
 
+  float newAirTemperature =
+    dht.readTemperature();
+
+
   float newHumidity =
     dht.readHumidity();
 
 
-  float newTemperature =
-    dht.readTemperature();
-
-
   if (
-    !isnan(newTemperature) &&
+    !isnan(newAirTemperature) &&
     !isnan(newHumidity)
   ) {
 
-    temperature =
-      newTemperature;
+    airTemperature =
+      newAirTemperature;
+
 
     humidity =
       newHumidity;
 
+
     dhtValid =
       true;
 
-  } else {
+  }
+
+  else {
 
     dhtValid =
       false;
@@ -415,38 +506,76 @@ void readSensors() {
     analogRead(SOIL_PIN);
 
 
+  soilPercent =
+    map(
+      soilRaw,
+      SOIL_DRY_VALUE,
+      SOIL_WET_VALUE,
+      0,
+      100
+    );
+
+
+  soilPercent =
+    constrain(
+      soilPercent,
+      0,
+      100
+    );
+
+
   // ===================================================
-  // MQ-135
+  // LDR
   // ===================================================
 
-  // Average several readings to make
-  // the displayed value less jumpy.
-
-  long mqTotal = 0;
-
-  const int mqSamples = 10;
+  ldrValue =
+    digitalRead(LDR_PIN);
 
 
-  for (
-    int i = 0;
-    i < mqSamples;
-    i++
+  // Your module:
+  //
+  // 0 = BRIGHT
+  // 1 = DARK
+
+
+  // ===================================================
+  // DS18B20
+  // ===================================================
+
+  ds18b20.requestTemperatures();
+
+
+  float newSoilTemperature =
+    ds18b20.getTempCByIndex(0);
+
+
+  // -127 C usually means sensor not detected
+
+  if (
+    newSoilTemperature != DEVICE_DISCONNECTED_C &&
+    newSoilTemperature > -100.0 &&
+    newSoilTemperature < 125.0
   ) {
 
-    mqTotal +=
-      analogRead(MQ135_PIN);
+    soilTemperature =
+      newSoilTemperature;
 
-    delay(2);
+
+    ds18b20Valid =
+      true;
+
   }
 
+  else {
 
-  airRaw =
-    mqTotal / mqSamples;
+    ds18b20Valid =
+      false;
+  }
 }
 
 
 // =====================================================
-// BUTTON HANDLER
+// BUTTON
 // =====================================================
 
 void handleButton() {
@@ -455,7 +584,6 @@ void handleButton() {
     digitalRead(BUTTON_PIN);
 
 
-  // Button changed
   if (
     reading !=
     lastButtonReading
@@ -466,7 +594,6 @@ void handleButton() {
   }
 
 
-  // Debounce
   if (
     millis() - lastDebounceTime
     > debounceDelay
@@ -481,7 +608,6 @@ void handleButton() {
         reading;
 
 
-      // Button pressed
       if (
         stableButtonState == LOW
       ) {
@@ -489,16 +615,17 @@ void handleButton() {
         currentScreen++;
 
 
-        // 5 screens
+        // 6 screens:
+        // 0 - 5
+
         if (
-          currentScreen > 4
+          currentScreen > 5
         ) {
 
           currentScreen = 0;
         }
 
 
-        // Immediately redraw OLED
         updateDisplay();
       }
     }
@@ -517,10 +644,13 @@ void handleButton() {
 void updateRGB() {
 
   // ===================================================
-  // BLUE = DHT SENSOR ERROR
+  // SENSOR ERROR = BLUE
   // ===================================================
 
-  if (!dhtValid) {
+  if (
+    !dhtValid ||
+    !ds18b20Valid
+  ) {
 
     setRGB(
       false,
@@ -533,15 +663,19 @@ void updateRGB() {
 
 
   // ===================================================
-  // CHECK CURRENT CONDITIONS
+  // AIR TEMPERATURE
   // ===================================================
 
-  bool tempProblem =
+  bool airTempProblem =
 
-    temperature < TEMP_LOW ||
+    airTemperature < AIR_TEMP_LOW ||
 
-    temperature > TEMP_HIGH;
+    airTemperature > AIR_TEMP_HIGH;
 
+
+  // ===================================================
+  // HUMIDITY
+  // ===================================================
 
   bool humidityProblem =
 
@@ -550,28 +684,36 @@ void updateRGB() {
     humidity > HUMIDITY_HIGH;
 
 
-  bool soilProblem =
+  // ===================================================
+  // SOIL MOISTURE
+  // ===================================================
 
-    soilRaw >
-    SOIL_DRY_THRESHOLD;
+  bool soilMoistureProblem =
+
+    soilPercent <
+    SOIL_DRY_PERCENT;
 
 
   // ===================================================
-  // IMPORTANT:
-  //
-  // MQ-135 is NOT used to trigger RED yet.
-  //
-  // We need to establish its baseline/calibration
-  // before deciding what RAW value means bad air.
+  // SOIL TEMPERATURE
   // ===================================================
 
+  bool soilTempProblem =
 
-  // RED = Attention required
+    soilTemperature < SOIL_TEMP_LOW ||
+
+    soilTemperature > SOIL_TEMP_HIGH;
+
+
+  // ===================================================
+  // ATTENTION = RED
+  // ===================================================
 
   if (
-    tempProblem ||
+    airTempProblem ||
     humidityProblem ||
-    soilProblem
+    soilMoistureProblem ||
+    soilTempProblem
   ) {
 
     setRGB(
@@ -584,8 +726,9 @@ void updateRGB() {
   }
 
 
-  // GREEN = current calibrated/test
-  // conditions are normal
+  // ===================================================
+  // NORMAL = GREEN
+  // ===================================================
 
   setRGB(
     false,
@@ -599,16 +742,11 @@ void updateRGB() {
 // RGB OUTPUT
 // =====================================================
 //
-// Your LED is currently wired as common cathode:
+// Common Cathode RGB:
 //
 // HIGH = ON
 // LOW  = OFF
 //
-// Confirmed mapping:
-//
-// GPIO 12 = RED
-// GPIO 11 = GREEN
-// GPIO 10 = BLUE
 // =====================================================
 
 void setRGB(
@@ -653,7 +791,7 @@ void updateDisplay() {
 
     case 1:
 
-      showTemperatureScreen();
+      showAirTemperatureScreen();
 
       break;
 
@@ -667,14 +805,21 @@ void updateDisplay() {
 
     case 3:
 
-      showSoilScreen();
+      showSoilMoistureScreen();
 
       break;
 
 
     case 4:
 
-      showAirQualityScreen();
+      showLightScreen();
+
+      break;
+
+
+    case 5:
+
+      showSoilTemperatureScreen();
 
       break;
   }
@@ -682,7 +827,7 @@ void updateDisplay() {
 
 
 // =====================================================
-// SCREEN 0
+// SCREEN 1
 // OVERALL STATUS
 // =====================================================
 
@@ -695,8 +840,10 @@ void showStatusScreen() {
   );
 
 
-  // Header
   display.setTextSize(1);
+
+
+  // Header
 
   display.setCursor(
     0,
@@ -728,229 +875,163 @@ void showStatusScreen() {
 
 
   // ===================================================
-  // DHT ERROR
+  // AIR TEMPERATURE
   // ===================================================
 
-  if (!dhtValid) {
+  display.setCursor(
+    0,
+    14
+  );
 
-    display.setTextSize(2);
+  display.print(
+    "Air : "
+  );
 
-    display.setCursor(
-      30,
-      18
+
+  if (dhtValid) {
+
+    display.print(
+      airTemperature,
+      1
     );
 
-    display.println(
-      "ERROR"
+    display.print(
+      " C"
     );
 
-
-    display.setTextSize(1);
-
-    display.setCursor(
-      24,
-      45
-    );
-
-    display.println(
-      "DHT11 ERROR"
-    );
-
-
-    display.display();
-
-    return;
   }
-
-
-  // ===================================================
-  // CHECK CONDITIONS
-  // ===================================================
-
-  bool tempLow =
-    temperature < TEMP_LOW;
-
-
-  bool tempHigh =
-    temperature > TEMP_HIGH;
-
-
-  bool humidityLow =
-    humidity < HUMIDITY_LOW;
-
-
-  bool humidityHigh =
-    humidity > HUMIDITY_HIGH;
-
-
-  bool soilDry =
-    soilRaw >
-    SOIL_DRY_THRESHOLD;
-
-
-  bool allGood =
-
-    !tempLow &&
-
-    !tempHigh &&
-
-    !humidityLow &&
-
-    !humidityHigh &&
-
-    !soilDry;
-
-
-  // ===================================================
-  // GOOD
-  // ===================================================
-
-  if (allGood) {
-
-    display.setTextSize(2);
-
-    display.setCursor(
-      32,
-      18
-    );
-
-    display.println(
-      "GOOD"
-    );
-
-
-    display.setTextSize(1);
-
-    display.setCursor(
-      17,
-      42
-    );
-
-    display.println(
-      "All parameters"
-    );
-
-
-    display.setCursor(
-      32,
-      53
-    );
-
-    display.println(
-      "normal"
-    );
-  }
-
-
-  // ===================================================
-  // ATTENTION
-  // ===================================================
 
   else {
 
-    display.setTextSize(2);
+    display.print(
+      "ERROR"
+    );
+  }
 
-    display.setCursor(
-      10,
-      14
+
+  // ===================================================
+  // HUMIDITY
+  // ===================================================
+
+  display.setCursor(
+    0,
+    24
+  );
+
+  display.print(
+    "Hum : "
+  );
+
+
+  if (dhtValid) {
+
+    display.print(
+      humidity,
+      0
     );
 
-    display.println(
-      "ATTENTION"
+    display.print(
+      "%"
     );
 
+  }
 
-    display.setTextSize(1);
+  else {
 
-    int y = 36;
-
-
-    if (
-      tempLow &&
-      y <= 56
-    ) {
-
-      display.setCursor(
-        0,
-        y
-      );
-
-      display.println(
-        "Temperature: LOW"
-      );
-
-      y += 10;
-    }
+    display.print(
+      "ERROR"
+    );
+  }
 
 
-    if (
-      tempHigh &&
-      y <= 56
-    ) {
+  // ===================================================
+  // SOIL MOISTURE
+  // ===================================================
 
-      display.setCursor(
-        0,
-        y
-      );
+  display.setCursor(
+    0,
+    34
+  );
 
-      display.println(
-        "Temperature: HIGH"
-      );
-
-      y += 10;
-    }
+  display.print(
+    "Moist: "
+  );
 
 
-    if (
-      humidityLow &&
-      y <= 56
-    ) {
-
-      display.setCursor(
-        0,
-        y
-      );
-
-      display.println(
-        "Humidity: LOW"
-      );
-
-      y += 10;
-    }
+  display.print(
+    soilPercent
+  );
 
 
-    if (
-      humidityHigh &&
-      y <= 56
-    ) {
-
-      display.setCursor(
-        0,
-        y
-      );
-
-      display.println(
-        "Humidity: HIGH"
-      );
-
-      y += 10;
-    }
+  display.print(
+    "%"
+  );
 
 
-    if (
-      soilDry &&
-      y <= 56
-    ) {
+  // ===================================================
+  // LIGHT
+  // ===================================================
 
-      display.setCursor(
-        0,
-        y
-      );
+  display.setCursor(
+    0,
+    44
+  );
 
-      display.println(
-        "Soil: DRY"
-      );
-    }
+  display.print(
+    "Light: "
+  );
+
+
+  if (
+    ldrValue == LOW
+  ) {
+
+    display.print(
+      "BRIGHT"
+    );
+
+  }
+
+  else {
+
+    display.print(
+      "DARK"
+    );
+  }
+
+
+  // ===================================================
+  // SOIL TEMPERATURE
+  // ===================================================
+
+  display.setCursor(
+    0,
+    54
+  );
+
+  display.print(
+    "SoilT: "
+  );
+
+
+  if (ds18b20Valid) {
+
+    display.print(
+      soilTemperature,
+      1
+    );
+
+    display.print(
+      "C"
+    );
+
+  }
+
+  else {
+
+    display.print(
+      "ERROR"
+    );
   }
 
 
@@ -959,11 +1040,11 @@ void showStatusScreen() {
 
 
 // =====================================================
-// SCREEN 1
-// TEMPERATURE
+// SCREEN 2
+// AIR TEMPERATURE
 // =====================================================
 
-void showTemperatureScreen() {
+void showAirTemperatureScreen() {
 
   display.clearDisplay();
 
@@ -994,12 +1075,12 @@ void showTemperatureScreen() {
 
 
   display.setCursor(
-    28,
+    22,
     16
   );
 
   display.println(
-    "TEMPERATURE"
+    "AIR TEMPERATURE"
   );
 
 
@@ -1016,20 +1097,23 @@ void showTemperatureScreen() {
       "ERROR"
     );
 
-  } else {
+  }
+
+  else {
 
     display.setTextSize(2);
 
     display.setCursor(
-      22,
-      31
+      20,
+      30
     );
 
 
     display.print(
-      temperature,
+      airTemperature,
       1
     );
+
 
     display.print(
       " C"
@@ -1039,28 +1123,34 @@ void showTemperatureScreen() {
     display.setTextSize(1);
 
     display.setCursor(
-      38,
+      40,
       53
     );
 
 
     if (
-      temperature < TEMP_LOW
+      airTemperature <
+      AIR_TEMP_LOW
     ) {
 
       display.print(
         "LOW"
       );
 
-    } else if (
-      temperature > TEMP_HIGH
+    }
+
+    else if (
+      airTemperature >
+      AIR_TEMP_HIGH
     ) {
 
       display.print(
         "HIGH"
       );
 
-    } else {
+    }
+
+    else {
 
       display.print(
         "NORMAL"
@@ -1074,7 +1164,7 @@ void showTemperatureScreen() {
 
 
 // =====================================================
-// SCREEN 2
+// SCREEN 3
 // HUMIDITY
 // =====================================================
 
@@ -1131,13 +1221,15 @@ void showHumidityScreen() {
       "ERROR"
     );
 
-  } else {
+  }
+
+  else {
 
     display.setTextSize(2);
 
     display.setCursor(
-      22,
-      31
+      25,
+      30
     );
 
 
@@ -1145,6 +1237,7 @@ void showHumidityScreen() {
       humidity,
       1
     );
+
 
     display.print(
       " %"
@@ -1154,28 +1247,34 @@ void showHumidityScreen() {
     display.setTextSize(1);
 
     display.setCursor(
-      38,
+      40,
       53
     );
 
 
     if (
-      humidity < HUMIDITY_LOW
+      humidity <
+      HUMIDITY_LOW
     ) {
 
       display.print(
         "LOW"
       );
 
-    } else if (
-      humidity > HUMIDITY_HIGH
+    }
+
+    else if (
+      humidity >
+      HUMIDITY_HIGH
     ) {
 
       display.print(
         "HIGH"
       );
 
-    } else {
+    }
+
+    else {
 
       display.print(
         "NORMAL"
@@ -1189,11 +1288,11 @@ void showHumidityScreen() {
 
 
 // =====================================================
-// SCREEN 3
+// SCREEN 4
 // SOIL MOISTURE
 // =====================================================
 
-void showSoilScreen() {
+void showSoilMoistureScreen() {
 
   display.clearDisplay();
 
@@ -1233,42 +1332,82 @@ void showSoilScreen() {
   );
 
 
+  // Percentage
+
   display.setTextSize(2);
 
   display.setCursor(
-    32,
-    31
+    35,
+    28
   );
 
 
-  display.println(
-    soilRaw
+  display.print(
+    soilPercent
   );
 
+
+  display.print(
+    " %"
+  );
+
+
+  // Status
 
   display.setTextSize(1);
 
   display.setCursor(
-    38,
-    53
+    40,
+    47
   );
 
 
   if (
-    soilRaw >
-    SOIL_DRY_THRESHOLD
+    soilPercent <
+    SOIL_DRY_PERCENT
   ) {
 
     display.print(
       "DRY"
     );
 
-  } else {
+  }
+
+  else if (
+    soilPercent >
+    SOIL_WET_PERCENT
+  ) {
 
     display.print(
-      "OK"
+      "WET"
+    );
+
+  }
+
+  else {
+
+    display.print(
+      "NORMAL"
     );
   }
+
+
+  // RAW reading
+
+  display.setCursor(
+    30,
+    56
+  );
+
+
+  display.print(
+    "RAW: "
+  );
+
+
+  display.print(
+    soilRaw
+  );
 
 
   display.display();
@@ -1276,11 +1415,11 @@ void showSoilScreen() {
 
 
 // =====================================================
-// SCREEN 4
-// MQ-135 AIR QUALITY
+// SCREEN 5
+// LIGHT
 // =====================================================
 
-void showAirQualityScreen() {
+void showLightScreen() {
 
   display.clearDisplay();
 
@@ -1311,39 +1450,214 @@ void showAirQualityScreen() {
 
 
   display.setCursor(
-    30,
+    34,
     16
   );
 
   display.println(
-    "AIR QUALITY"
+    "LIGHT LEVEL"
   );
 
 
   display.setTextSize(2);
 
+
+  // Confirmed:
+  // 0 = BRIGHT
+  // 1 = DARK
+
+  if (
+    ldrValue == LOW
+  ) {
+
+    display.setCursor(
+      25,
+      30
+    );
+
+    display.println(
+      "BRIGHT"
+    );
+
+  }
+
+  else {
+
+    display.setCursor(
+      40,
+      30
+    );
+
+    display.println(
+      "DARK"
+    );
+  }
+
+
+  display.setTextSize(1);
+
   display.setCursor(
-    32,
-    30
+    31,
+    53
   );
 
 
-  display.println(
-    airRaw
+  display.print(
+    "Digital: "
+  );
+
+
+  display.print(
+    ldrValue
+  );
+
+
+  display.display();
+}
+
+
+// =====================================================
+// SCREEN 6
+// SOIL TEMPERATURE - DS18B20
+// =====================================================
+
+void showSoilTemperatureScreen() {
+
+  display.clearDisplay();
+
+  display.setTextColor(
+    SSD1306_WHITE
   );
 
 
   display.setTextSize(1);
 
   display.setCursor(
-    22,
-    53
+    32,
+    0
+  );
+
+  display.println(
+    "GreenPulse"
   );
 
 
-  display.print(
-    "MQ-135 RAW"
+  display.drawLine(
+    0,
+    10,
+    127,
+    10,
+    SSD1306_WHITE
   );
+
+
+  display.setCursor(
+    18,
+    16
+  );
+
+  display.println(
+    "SOIL TEMPERATURE"
+  );
+
+
+  // ===================================================
+  // DS18B20 ERROR
+  // ===================================================
+
+  if (!ds18b20Valid) {
+
+    display.setTextSize(2);
+
+    display.setCursor(
+      30,
+      30
+    );
+
+    display.println(
+      "ERROR"
+    );
+
+
+    display.setTextSize(1);
+
+    display.setCursor(
+      10,
+      53
+    );
+
+    display.println(
+      "Check DS18B20"
+    );
+
+  }
+
+  else {
+
+    // =================================================
+    // TEMPERATURE
+    // =================================================
+
+    display.setTextSize(2);
+
+    display.setCursor(
+      20,
+      30
+    );
+
+
+    display.print(
+      soilTemperature,
+      1
+    );
+
+
+    display.print(
+      " C"
+    );
+
+
+    // =================================================
+    // STATUS
+    // =================================================
+
+    display.setTextSize(1);
+
+    display.setCursor(
+      40,
+      53
+    );
+
+
+    if (
+      soilTemperature <
+      SOIL_TEMP_LOW
+    ) {
+
+      display.print(
+        "LOW"
+      );
+
+    }
+
+    else if (
+      soilTemperature >
+      SOIL_TEMP_HIGH
+    ) {
+
+      display.print(
+        "HIGH"
+      );
+
+    }
+
+    else {
+
+      display.print(
+        "NORMAL"
+      );
+    }
+  }
 
 
   display.display();
