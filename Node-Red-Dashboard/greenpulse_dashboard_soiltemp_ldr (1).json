@@ -1,0 +1,675 @@
+[
+  {
+    "id": "gp_tab",
+    "type": "tab",
+    "label": "GreenPulse Dashboard",
+    "disabled": false,
+    "info": "GreenPulse IoT Dashboard 2.0"
+  },
+  {
+    "id": "gp_base",
+    "type": "ui-base",
+    "name": "GreenPulse Dashboard",
+    "path": "/dashboard",
+    "appIcon": "",
+    "includeClientData": true,
+    "acceptsClientConfig": [
+      "ui-notification",
+      "ui-control"
+    ],
+    "showPathInSidebar": false,
+    "headerContent": "page",
+    "navigationStyle": "default",
+    "titleBarStyle": "default",
+    "showReconnectNotification": true,
+    "notificationDisplayTime": 1,
+    "showDisconnectNotification": true
+  },
+  {
+    "id": "gp_theme",
+    "type": "ui-theme",
+    "name": "GreenPulse Theme",
+    "colors": {
+      "surface": "#ffffff",
+      "primary": "#2e7d32",
+      "bgPage": "#f4f7f4",
+      "groupBg": "#ffffff",
+      "groupOutline": "#d8e3d8"
+    },
+    "sizes": {
+      "density": "default",
+      "pagePadding": "12px",
+      "groupGap": "12px",
+      "groupBorderRadius": "8px",
+      "widgetGap": "12px"
+    }
+  },
+  {
+    "id": "gp_page",
+    "type": "ui-page",
+    "name": "GreenPulse Dashboard",
+    "ui": "gp_base",
+    "path": "/greenpulse",
+    "icon": "eco",
+    "layout": "grid",
+    "theme": "gp_theme",
+    "breakpoints": [
+      {
+        "name": "Default",
+        "px": "0",
+        "cols": "3"
+      },
+      {
+        "name": "Tablet",
+        "px": "576",
+        "cols": "6"
+      },
+      {
+        "name": "Small Desktop",
+        "px": "768",
+        "cols": "9"
+      },
+      {
+        "name": "Desktop",
+        "px": "1024",
+        "cols": "12"
+      }
+    ],
+    "order": 1,
+    "className": "",
+    "visible": true,
+    "disabled": false
+  },
+  {
+    "id": "gp_group_status",
+    "type": "ui-group",
+    "name": "System Status",
+    "page": "gp_page",
+    "width": "12",
+    "height": "1",
+    "order": 1,
+    "showTitle": true,
+    "className": "",
+    "visible": "true",
+    "disabled": "false",
+    "groupType": "default"
+  },
+  {
+    "id": "gp_group_sensors",
+    "type": "ui-group",
+    "name": "🌿 Greenhouse Sensor Readings",
+    "page": "gp_page",
+    "width": "12",
+    "height": "8",
+    "order": 2,
+    "showTitle": true,
+    "className": "",
+    "visible": "true",
+    "disabled": "false",
+    "groupType": "default"
+  },
+  {
+    "id": "gp_group_care",
+    "type": "ui-group",
+    "name": "🌱 Plant Care",
+    "page": "gp_page",
+    "width": "12",
+    "height": "3",
+    "order": 3,
+    "showTitle": true,
+    "className": "",
+    "visible": "true",
+    "disabled": "false",
+    "groupType": "default"
+  },
+  {
+    "id": "gp_group_input",
+    "type": "ui-group",
+    "name": "🤖 LLM Input Payload",
+    "page": "gp_page",
+    "width": "12",
+    "height": "4",
+    "order": 4,
+    "showTitle": true,
+    "className": "",
+    "visible": "true",
+    "disabled": "false",
+    "groupType": "default"
+  },
+  {
+    "id": "gp_group_output",
+    "type": "ui-group",
+    "name": "🤖 LLM Output",
+    "page": "gp_page",
+    "width": "12",
+    "height": "2",
+    "order": 5,
+    "showTitle": true,
+    "className": "",
+    "visible": "true",
+    "disabled": "false",
+    "groupType": "default"
+  },
+  {
+    "id": "gp_group_log",
+    "type": "ui-group",
+    "name": "📡 MQTT Payload Log",
+    "page": "gp_page",
+    "width": "12",
+    "height": "4",
+    "order": 6,
+    "showTitle": true,
+    "className": "",
+    "visible": "true",
+    "disabled": "false",
+    "groupType": "default"
+  },
+  {
+    "id": "gp_status_mqtt",
+    "type": "ui-text",
+    "z": "gp_tab",
+    "group": "gp_group_status",
+    "order": 1,
+    "width": "4",
+    "height": "1",
+    "name": "MQTT Status",
+    "label": "MQTT STATUS",
+    "format": "{{msg.payload}}",
+    "layout": "row-spread",
+    "style": false,
+    "font": "",
+    "fontSize": 16,
+    "color": "#000000",
+    "className": "",
+    "x": 1040,
+    "y": 100,
+    "wires": []
+  },
+  {
+    "id": "gp_status_device",
+    "type": "ui-text",
+    "z": "gp_tab",
+    "group": "gp_group_status",
+    "order": 2,
+    "width": "4",
+    "height": "1",
+    "name": "Device Status",
+    "label": "DEVICE STATUS",
+    "format": "{{msg.payload}}",
+    "layout": "row-spread",
+    "style": false,
+    "font": "",
+    "fontSize": 16,
+    "color": "#000000",
+    "className": "",
+    "x": 1040,
+    "y": 140,
+    "wires": []
+  },
+  {
+    "id": "gp_status_time",
+    "type": "ui-text",
+    "z": "gp_tab",
+    "group": "gp_group_status",
+    "order": 3,
+    "width": "4",
+    "height": "1",
+    "name": "Last Update",
+    "label": "LAST UPDATE",
+    "format": "{{msg.payload}}",
+    "layout": "row-spread",
+    "style": false,
+    "font": "",
+    "fontSize": 16,
+    "color": "#000000",
+    "className": "",
+    "x": 1040,
+    "y": 180,
+    "wires": []
+  },
+  {
+    "id": "gp_gauge_soil",
+    "type": "ui-gauge",
+    "z": "gp_tab",
+    "name": "Soil Moisture",
+    "group": "gp_group_sensors",
+    "order": 1,
+    "width": "4",
+    "height": "4",
+    "gtype": "gauge-half",
+    "gstyle": "needle",
+    "title": "SOIL MOISTURE",
+    "units": "%",
+    "icon": "",
+    "prefix": "",
+    "suffix": "",
+    "segments": [
+      {
+        "from": "0",
+        "color": "#ef5350"
+      },
+      {
+        "from": "30",
+        "color": "#ffa726"
+      },
+      {
+        "from": "50",
+        "color": "#66bb6a"
+      }
+    ],
+    "min": 0,
+    "max": "100",
+    "sizeThickness": 16,
+    "sizeGap": 4,
+    "sizeKeyThickness": 8,
+    "styleRounded": true,
+    "styleGlow": false,
+    "className": "",
+    "x": 1040,
+    "y": 260,
+    "wires": []
+  },
+  {
+    "id": "gp_gauge_temp",
+    "type": "ui-gauge",
+    "z": "gp_tab",
+    "name": "Temperature",
+    "group": "gp_group_sensors",
+    "order": 2,
+    "width": "4",
+    "height": "4",
+    "gtype": "gauge-half",
+    "gstyle": "needle",
+    "title": "TEMPERATURE",
+    "units": "°C",
+    "icon": "",
+    "prefix": "",
+    "suffix": "",
+    "segments": [
+      {
+        "from": "0",
+        "color": "#42a5f5"
+      },
+      {
+        "from": "18",
+        "color": "#66bb6a"
+      },
+      {
+        "from": "32",
+        "color": "#ef5350"
+      }
+    ],
+    "min": 0,
+    "max": "50",
+    "sizeThickness": 16,
+    "sizeGap": 4,
+    "sizeKeyThickness": 8,
+    "styleRounded": true,
+    "styleGlow": false,
+    "className": "",
+    "x": 1040,
+    "y": 300,
+    "wires": []
+  },
+  {
+    "id": "gp_gauge_hum",
+    "type": "ui-gauge",
+    "z": "gp_tab",
+    "name": "Humidity",
+    "group": "gp_group_sensors",
+    "order": 3,
+    "width": "4",
+    "height": "4",
+    "gtype": "gauge-half",
+    "gstyle": "needle",
+    "title": "HUMIDITY",
+    "units": "%",
+    "icon": "",
+    "prefix": "",
+    "suffix": "",
+    "segments": [
+      {
+        "from": "0",
+        "color": "#ffa726"
+      },
+      {
+        "from": "40",
+        "color": "#66bb6a"
+      },
+      {
+        "from": "80",
+        "color": "#42a5f5"
+      }
+    ],
+    "min": 0,
+    "max": "100",
+    "sizeThickness": 16,
+    "sizeGap": 4,
+    "sizeKeyThickness": 8,
+    "styleRounded": true,
+    "styleGlow": false,
+    "className": "",
+    "x": 1040,
+    "y": 340,
+    "wires": []
+  },
+  {
+    "id": "gp_gauge_soil_temp",
+    "type": "ui-gauge",
+    "z": "gp_tab",
+    "name": "Soil Temperature",
+    "group": "gp_group_sensors",
+    "order": 4,
+    "width": "6",
+    "height": "4",
+    "gtype": "gauge-half",
+    "gstyle": "needle",
+    "title": "🌡️ SOIL TEMPERATURE",
+    "units": "°C",
+    "icon": "",
+    "prefix": "",
+    "suffix": "",
+    "segments": [
+      {
+        "from": "0",
+        "color": "#42a5f5"
+      },
+      {
+        "from": "18",
+        "color": "#66bb6a"
+      },
+      {
+        "from": "30",
+        "color": "#ffa726"
+      },
+      {
+        "from": "36",
+        "color": "#ef5350"
+      }
+    ],
+    "min": 0,
+    "max": "50",
+    "sizeThickness": 16,
+    "sizeGap": 4,
+    "sizeKeyThickness": 8,
+    "styleRounded": true,
+    "styleGlow": false,
+    "className": "",
+    "x": 1050,
+    "y": 380,
+    "wires": []
+  },
+  {
+    "id": "gp_ldr_status",
+    "type": "ui-text",
+    "z": "gp_tab",
+    "group": "gp_group_sensors",
+    "order": 5,
+    "width": "6",
+    "height": "4",
+    "name": "Light Status",
+    "label": "☀️ LIGHT CONDITION",
+    "format": "{{msg.payload}}",
+    "layout": "col-center",
+    "style": false,
+    "font": "",
+    "fontSize": 28,
+    "color": "#000000",
+    "wrapText": true,
+    "className": "",
+    "x": 1050,
+    "y": 420,
+    "wires": []
+  },
+  {
+    "id": "gp_care_text",
+    "type": "ui-text",
+    "z": "gp_tab",
+    "group": "gp_group_care",
+    "order": 1,
+    "width": "12",
+    "height": "2",
+    "name": "Plant Care",
+    "label": "",
+    "format": "{{msg.payload}}",
+    "layout": "row-left",
+    "style": false,
+    "font": "",
+    "fontSize": 18,
+    "color": "#000000",
+    "wrapText": true,
+    "className": "",
+    "x": 1040,
+    "y": 400,
+    "wires": []
+  },
+  {
+    "id": "gp_llm_input",
+    "type": "ui-text",
+    "z": "gp_tab",
+    "group": "gp_group_input",
+    "order": 1,
+    "width": "12",
+    "height": "3",
+    "name": "LLM Input Payload",
+    "label": "Topic: greenpulse/sensor/data",
+    "format": "{{msg.payload}}",
+    "layout": "col-center",
+    "style": false,
+    "font": "monospace",
+    "fontSize": 14,
+    "color": "#000000",
+    "wrapText": true,
+    "className": "",
+    "x": 1050,
+    "y": 460,
+    "wires": []
+  },
+  {
+    "id": "gp_llm_output",
+    "type": "ui-text",
+    "z": "gp_tab",
+    "group": "gp_group_output",
+    "order": 1,
+    "width": "12",
+    "height": "2",
+    "name": "LLM Output",
+    "label": "Topic: greenpulse/llm/care",
+    "format": "{{msg.payload}}",
+    "layout": "col-center",
+    "style": false,
+    "font": "",
+    "fontSize": 16,
+    "color": "#000000",
+    "wrapText": true,
+    "className": "",
+    "x": 1050,
+    "y": 520,
+    "wires": []
+  },
+  {
+    "id": "gp_log_text",
+    "type": "ui-text",
+    "z": "gp_tab",
+    "group": "gp_group_log",
+    "order": 1,
+    "width": "12",
+    "height": "4",
+    "name": "MQTT Payload Log",
+    "label": "",
+    "format": "{{msg.payload}}",
+    "layout": "col-left",
+    "style": false,
+    "font": "monospace",
+    "fontSize": 13,
+    "color": "#000000",
+    "wrapText": true,
+    "className": "",
+    "x": 1050,
+    "y": 580,
+    "wires": []
+  },
+  {
+    "id": "gp_test_sensor",
+    "type": "inject",
+    "z": "gp_tab",
+    "name": "TEST Sensor Data",
+    "props": [
+      {
+        "p": "payload"
+      },
+      {
+        "p": "topic",
+        "vt": "str"
+      }
+    ],
+    "repeat": "",
+    "crontab": "",
+    "once": false,
+    "onceDelay": 0.1,
+    "topic": "greenpulse/sensor/data",
+    "payload": "{\"soil_moisture\":62,\"temperature\":27.4,\"humidity\":71,\"soil_temperature\":24.8,\"light\":\"LIGHT\"}",
+    "payloadType": "json",
+    "x": 150,
+    "y": 180,
+    "wires": [
+      [
+        "gp_sensor_process"
+      ]
+    ]
+  },
+  {
+    "id": "gp_sensor_process",
+    "type": "function",
+    "z": "gp_tab",
+    "name": "Process Sensor Data",
+    "func": "const d = msg.payload;\nif (!d || typeof d !== 'object') return null;\nconst now = new Date().toLocaleTimeString();\nconst soil = Number(d.soil_moisture);\nconst temp = Number(d.temperature);\nconst hum = Number(d.humidity);\nconst soilTemp = Number(d.soil_temperature);\n\nlet lightRaw = d.light;\nlet isLight;\nif (typeof lightRaw === 'string') {\n    const s = lightRaw.trim().toUpperCase();\n    isLight = ['LIGHT','BRIGHT','ON','1','TRUE'].includes(s);\n} else if (typeof lightRaw === 'boolean') {\n    isLight = lightRaw;\n} else {\n    isLight = Number(lightRaw) >= 500;\n}\nconst lightStatus = isLight ? '☀️ LIGHT' : '🌙 DARK';\n\nlet messages = [];\nif (soil < 30) messages.push('💧 Soil is dry — watering recommended');\nelse if (soil < 50) messages.push('🌱 Soil moisture is moderate — monitor plant');\nelse messages.push('✅ Soil moisture is sufficient');\n\nif (!Number.isNaN(soilTemp)) {\n    if (soilTemp < 18) messages.push('❄️ Soil temperature is low');\n    else if (soilTemp > 30) messages.push('🔥 Soil temperature is high');\n    else messages.push('🌡️ Soil temperature is in the dashboard target range');\n}\nmessages.push(isLight ? '☀️ Greenhouse condition: Light' : '🌙 Greenhouse condition: Dark');\n\nconst care = messages.join('\\n');\nconst input = JSON.stringify(d, null, 2);\nconst log = `sensor/data    ${now}    ${JSON.stringify(d)}`;\nreturn [\n {payload:soil},{payload:temp},{payload:hum},{payload:soilTemp},{payload:lightStatus},\n {payload:'🟢 Online'},{payload:now},{payload:care},{payload:input},{payload:log}\n];",
+    "outputs": 10,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 410,
+    "y": 180,
+    "wires": [
+      [
+        "gp_gauge_soil"
+      ],
+      [
+        "gp_gauge_temp"
+      ],
+      [
+        "gp_gauge_hum"
+      ],
+      [
+        "gp_gauge_soil_temp"
+      ],
+      [
+        "gp_ldr_status"
+      ],
+      [
+        "gp_status_device"
+      ],
+      [
+        "gp_status_time"
+      ],
+      [
+        "gp_care_text"
+      ],
+      [
+        "gp_llm_input"
+      ],
+      [
+        "gp_log_text"
+      ]
+    ]
+  },
+  {
+    "id": "gp_test_mqtt",
+    "type": "inject",
+    "z": "gp_tab",
+    "name": "TEST MQTT Connected",
+    "props": [
+      {
+        "p": "payload"
+      }
+    ],
+    "repeat": "",
+    "crontab": "",
+    "once": true,
+    "onceDelay": 1,
+    "topic": "",
+    "payload": "🟢 Connected",
+    "payloadType": "str",
+    "x": 170,
+    "y": 100,
+    "wires": [
+      [
+        "gp_status_mqtt"
+      ]
+    ]
+  },
+  {
+    "id": "gp_test_llm",
+    "type": "inject",
+    "z": "gp_tab",
+    "name": "TEST LLM Response",
+    "props": [
+      {
+        "p": "payload"
+      },
+      {
+        "p": "topic",
+        "vt": "str"
+      }
+    ],
+    "repeat": "",
+    "crontab": "",
+    "once": false,
+    "onceDelay": 0.1,
+    "topic": "greenpulse/llm/care",
+    "payload": "{\"status\":\"healthy\",\"recommendation\":\"Greenhouse conditions look stable. Soil moisture and soil temperature are suitable, and the current light condition is being monitored.\"}",
+    "payloadType": "json",
+    "x": 160,
+    "y": 300,
+    "wires": [
+      [
+        "gp_llm_process"
+      ]
+    ]
+  },
+  {
+    "id": "gp_llm_process",
+    "type": "function",
+    "z": "gp_tab",
+    "name": "Process LLM Output",
+    "func": "const d = msg.payload;\nconst now = new Date().toLocaleTimeString();\nconst recommendation = (d && typeof d === 'object') ? (d.recommendation || JSON.stringify(d)) : String(d);\nconst log = `llm/care       ${now}    ${JSON.stringify(d)}`;\nreturn [{payload: recommendation},{payload: log}];",
+    "outputs": 2,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 410,
+    "y": 300,
+    "wires": [
+      [
+        "gp_llm_output"
+      ],
+      [
+        "gp_log_text"
+      ]
+    ]
+  },
+  {
+    "id": "gp_note",
+    "type": "comment",
+    "z": "gp_tab",
+    "name": "GreenPulse: Soil Moisture + Air Temp + Humidity + Soil Temp + LDR",
+    "info": "pH and Air Quality removed. Added Soil Temperature and LDR Light/Dark status.",
+    "x": 310,
+    "y": 40,
+    "wires": []
+  }
+]
