@@ -1,0 +1,508 @@
+[
+  {
+    "id": "gp_tab_final",
+    "type": "tab",
+    "label": "GreenPulse Dashboard",
+    "disabled": false,
+    "info": "Corrected GreenPulse Dashboard 2.0 flow"
+  },
+  {
+    "id": "gp_tls_final",
+    "type": "tls-config",
+    "name": "HiveMQ TLS",
+    "cert": "",
+    "key": "",
+    "ca": "",
+    "certname": "",
+    "keyname": "",
+    "caname": "",
+    "servername": "",
+    "verifyservercert": true,
+    "alpnprotocol": ""
+  },
+  {
+    "id": "gp_broker_final",
+    "type": "mqtt-broker",
+    "name": "GreenPulse HiveMQ",
+    "broker": "greenpulse-e7d7a235.a01.euc1.aws.hivemq.cloud",
+    "port": "8883",
+    "clientid": "greenpulse_nodered_dashboard_final",
+    "autoConnect": true,
+    "usetls": true,
+    "tls": "gp_tls_final",
+    "protocolVersion": "4",
+    "keepalive": "60",
+    "cleansession": true,
+    "autoUnsubscribe": true,
+    "birthTopic": "",
+    "birthQos": "0",
+    "birthPayload": "",
+    "birthMsg": {},
+    "closeTopic": "",
+    "closeQos": "0",
+    "closePayload": "",
+    "closeMsg": {},
+    "willTopic": "",
+    "willQos": "0",
+    "willPayload": "",
+    "willMsg": {},
+    "userProps": "",
+    "sessionExpiry": "",
+    "credentials": {
+      "user": "greenpulse_backend",
+      "password": "Green12345"
+    }
+  },
+  {
+    "id": "gp_base_final",
+    "type": "ui-base",
+    "name": "GreenPulse",
+    "path": "/dashboard",
+    "appIcon": "",
+    "includeClientData": true,
+    "acceptsClientConfig": [
+      "ui-notification",
+      "ui-control"
+    ],
+    "showPathInSidebar": false,
+    "headerContent": "page",
+    "navigationStyle": "default",
+    "titleBarStyle": "default",
+    "showReconnectNotification": true,
+    "notificationDisplayTime": 5,
+    "showDisconnectNotification": true,
+    "allowInstall": false
+  },
+  {
+    "id": "gp_theme_final",
+    "type": "ui-theme",
+    "name": "GreenPulse Theme",
+    "colors": {
+      "surface": "#1e293b",
+      "primary": "#10b981",
+      "bgPage": "#0f172a",
+      "groupBg": "#1e293b",
+      "groupOutline": "#334155"
+    },
+    "sizes": {
+      "density": "default",
+      "pagePadding": "12px",
+      "groupGap": "12px",
+      "groupBorderRadius": "14px",
+      "widgetGap": "12px"
+    }
+  },
+  {
+    "id": "gp_page_final",
+    "type": "ui-page",
+    "name": "GreenPulse Monitor",
+    "ui": "gp_base_final",
+    "path": "/greenpulse",
+    "icon": "eco",
+    "layout": "grid",
+    "theme": "gp_theme_final",
+    "breakpoints": [
+      {
+        "name": "Default",
+        "px": "0",
+        "cols": "3"
+      },
+      {
+        "name": "Tablet",
+        "px": "576",
+        "cols": "6"
+      },
+      {
+        "name": "Small Desktop",
+        "px": "768",
+        "cols": "9"
+      },
+      {
+        "name": "Desktop",
+        "px": "1024",
+        "cols": "12"
+      }
+    ],
+    "order": 1,
+    "className": ""
+  },
+  {
+    "id": "gp_group_final",
+    "type": "ui-group",
+    "name": "GreenPulse Smart Plant Care",
+    "page": "gp_page_final",
+    "width": "12",
+    "height": "1",
+    "order": 1,
+    "showTitle": false,
+    "className": "",
+    "visible": "true",
+    "disabled": "false"
+  },
+  {
+    "id": "gp_tel_final",
+    "type": "mqtt in",
+    "z": "gp_tab_final",
+    "name": "Telemetry",
+    "topic": "greenpulse/device01/telemetry",
+    "qos": "0",
+    "datatype": "auto-detect",
+    "broker": "gp_broker_final",
+    "nl": false,
+    "rap": true,
+    "rh": 0,
+    "inputs": 0,
+    "x": 120,
+    "y": 100,
+    "wires": [
+      [
+        "gp_norm_final"
+      ]
+    ]
+  },
+  {
+    "id": "gp_status_final",
+    "type": "mqtt in",
+    "z": "gp_tab_final",
+    "name": "Status",
+    "topic": "greenpulse/device01/status",
+    "qos": "0",
+    "datatype": "auto-detect",
+    "broker": "gp_broker_final",
+    "nl": false,
+    "rap": true,
+    "rh": 0,
+    "inputs": 0,
+    "x": 120,
+    "y": 150,
+    "wires": [
+      [
+        "gp_norm_final"
+      ]
+    ]
+  },
+  {
+    "id": "gp_profile_final",
+    "type": "mqtt in",
+    "z": "gp_tab_final",
+    "name": "Profile",
+    "topic": "greenpulse/device01/profile",
+    "qos": "1",
+    "datatype": "auto-detect",
+    "broker": "gp_broker_final",
+    "nl": false,
+    "rap": true,
+    "rh": 0,
+    "inputs": 0,
+    "x": 120,
+    "y": 200,
+    "wires": [
+      [
+        "gp_norm_final"
+      ]
+    ]
+  },
+  {
+    "id": "gp_ai_final",
+    "type": "mqtt in",
+    "z": "gp_tab_final",
+    "name": "AI Care",
+    "topic": "greenpulse/device01/ai",
+    "qos": "1",
+    "datatype": "auto-detect",
+    "broker": "gp_broker_final",
+    "nl": false,
+    "rap": true,
+    "rh": 0,
+    "inputs": 0,
+    "x": 120,
+    "y": 250,
+    "wires": [
+      [
+        "gp_norm_final"
+      ]
+    ]
+  },
+  {
+    "id": "gp_norm_final",
+    "type": "function",
+    "z": "gp_tab_final",
+    "name": "Normalize MQTT Payload",
+    "func": "// Accept both HiveMQ auto-detected objects and JSON strings.\nif (typeof msg.payload === \"string\") {\n    const text = msg.payload.trim();\n    if (text.startsWith(\"{\") || text.startsWith(\"[\")) {\n        try { msg.payload = JSON.parse(text); }\n        catch (e) {\n            node.warn(\"Invalid JSON on \" + (msg.topic || \"unknown\") + \": \" + e.message);\n            return null;\n        }\n    }\n}\nreturn msg;",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 380,
+    "y": 175,
+    "wires": [
+      [
+        "gp_state_final",
+        "gp_debug_final"
+      ]
+    ]
+  },
+  {
+    "id": "gp_debug_final",
+    "type": "debug",
+    "z": "gp_tab_final",
+    "name": "MQTT Data Debug",
+    "active": true,
+    "tosidebar": true,
+    "console": false,
+    "tostatus": false,
+    "complete": "true",
+    "targetType": "full",
+    "statusVal": "",
+    "statusType": "auto",
+    "x": 640,
+    "y": 100,
+    "wires": []
+  },
+  {
+    "id": "gp_state_final",
+    "type": "function",
+    "z": "gp_tab_final",
+    "name": "Normalize and Persist Dashboard State",
+    "func": "// Store telemetry arrival time independently of any status message.\nconst topic=String(msg.topic||'');\nlet s=flow.get('gp_dashboard_state')||{telemetry:null,profile:null,ai:null,status:null,location:null,settings:null,notifications:[],notificationStatus:null,updatedAt:null};\nif(topic==='greenpulse/dashboard/mqtt'){\n  s.mqtt=String(msg.payload||'UNKNOWN').toUpperCase();\n  flow.set('gp_dashboard_state',s);return {topic:'gp/state',payload:s};\n}\nlet p=msg.payload;\nif(typeof p==='string'){\n  const v=p.trim();\n  try {p=JSON.parse(v)} catch(e) {p=v}\n}\nif(topic==='greenpulse/device01/telemetry'){\n  if(!p||typeof p!=='object'||Array.isArray(p)||p.device_id!=='device01')return null;\n  s.telemetry=p;\n  s.updatedAt=Date.now();\n  s.lastTelemetry=new Date().toISOString();\n}else if(topic==='greenpulse/device01/status'){\n  // Accept {status:'ONLINE'}, {state:'ONLINE'}, or plain ONLINE.\n  const raw=(p&&typeof p==='object')?(p.status||p.state||'UNKNOWN'):p;\n  s.status={status:String(raw||'UNKNOWN').toUpperCase(),receivedAt:Date.now()};\n}else if(topic==='greenpulse/device01/profile'&&p&&typeof p==='object')s.profile=p;\nelse if(topic==='greenpulse/device01/ai'&&p&&typeof p==='object')s.ai=p;\nelse if(topic==='greenpulse/device01/location/resolved'&&p&&typeof p==='object')s.location=p;\nelse if(topic==='greenpulse/device01/notification/settings/state'&&p&&typeof p==='object'){\n  s.settings=p;\n  if(Array.isArray(p.recent_notifications)){\n    if(!Array.isArray(s.notifications)) s.notifications=[];\n    p.recent_notifications.forEach(n=>{\n      if(n&&n.notification_id&&!s.notifications.some(existing=>existing.notification_id===n.notification_id)){\n        s.notifications.push(n);\n      }\n    });\n    s.notifications=s.notifications.slice(0,40);\n  }\n}\nelse if(topic==='greenpulse/device01/notification/status'&&p&&typeof p==='object')s.notificationStatus=p;\nelse if(topic==='greenpulse/device01/notifications'&&p&&typeof p==='object'){\n  if(!Array.isArray(s.notifications))s.notifications=[];\n  if(p.notification_id&&!s.notifications.some(n=>n.notification_id===p.notification_id))s.notifications.unshift(p);\n  s.notifications=s.notifications.slice(0,40);\n}\nelse if(topic==='greenpulse/dashboard/init'){}\nelse return null;\nflow.set('gp_dashboard_state',s);\nreturn {topic:'gp/state',payload:s};",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 630,
+    "y": 190,
+    "wires": [
+      [
+        "gp_ui_final"
+      ]
+    ]
+  },
+  {
+    "id": "gp_init_final",
+    "type": "inject",
+    "z": "gp_tab_final",
+    "name": "Initialize",
+    "props": [
+      {
+        "p": "payload"
+      },
+      {
+        "p": "topic",
+        "vt": "str"
+      }
+    ],
+    "repeat": "",
+    "crontab": "",
+    "once": true,
+    "onceDelay": "1",
+    "topic": "greenpulse/dashboard/init",
+    "payload": "{}",
+    "payloadType": "json",
+    "x": 120,
+    "y": 320,
+    "wires": [
+      [
+        "gp_state_final"
+      ]
+    ]
+  },
+  {
+    "id": "gp_ui_final",
+    "type": "ui-template",
+    "z": "gp_tab_final",
+    "group": "gp_group_final",
+    "page": "",
+    "ui": "",
+    "name": "GreenPulse Dashboard — Location + Notifications",
+    "order": 1,
+    "width": "12",
+    "height": "18",
+    "head": "",
+    "format": "<template>\n<div class=\"gp-shell\">\n <header class=\"gp-header\"><div><div class=\"gp-eyebrow\">GREENPULSE · IOT MONITORING</div><h1>Smart Greenhouse <span>Control Center</span></h1><p>Live sensor intelligence · Crop management · Weather · Smart notifications</p></div><div class=\"gp-live\" :class=\"deviceOnline?'online':'offline'\"><span class=\"gp-dot\"></span>{{deviceLabel}}</div></header>\n <div class=\"gp-section-title\">Live Environment <span>{{lastSeen}}</span></div>\n <div class=\"gp-grid gp-metrics\">\n  <div class=\"gp-card gp-metric\" v-for=\"m in metrics\" :key=\"m.key\"><div class=\"gp-metric-label\">{{m.icon}} {{m.title}}</div><div class=\"gp-reading\">{{valueText(m) }} <small>{{m.unit}}</small></div><div class=\"gp-meter\"><div class=\"gp-fill\" :style=\"{width:barWidth(m)+'%',background:metricColor(m)}\"></div></div><div class=\"gp-hint\">{{rangeText(m)}} <span :style=\"{color:metricColor(m)}\">{{metricState(m)}}</span></div></div>\n  <div class=\"gp-card gp-metric\"><div class=\"gp-metric-label\">☀️ LIGHT LEVEL</div><div class=\"gp-reading gp-light\">{{telemetry?.light==='BRIGHT'?'☀️ BRIGHT':telemetry?.light==='DARK'?'🌙 DARK':'—'}}</div><div class=\"gp-hint\">Preferred: {{profile?.light_preference||'—'}}</div></div>\n </div>\n <div class=\"gp-grid gp-main\">\n  <section class=\"gp-card\"><h2>🌱 Crop Management</h2><label class=\"gp-label\">Active greenhouse plant</label><div class=\"gp-row\"><select v-model=\"plantSelection\" class=\"gp-input\"><option value=\"\">Choose a plant...</option><option v-for=\"p in plants\" :key=\"p\" :value=\"p\">{{p}}</option></select><button class=\"gp-btn\" @click=\"setPlant\" :disabled=\"!plantSelection\">Apply</button></div><p class=\"gp-muted\">Confirmed plant: <b>{{profile?.plant||'Waiting for profile'}}</b></p><div class=\"gp-thresholds\" v-if=\"profile\"><div v-for=\"m in metrics\" :key=\"m.key\"><span>{{m.title}}</span><b>{{rangeText(m)}}</b></div><div><span>Light preference</span><b>{{profile.light_preference||'—'}}</b></div></div><p v-else class=\"gp-empty\">Waiting for retained plant profile...</p></section>\n  <section class=\"gp-card\"><h2>🌍 Worldwide Greenhouse Location</h2><label class=\"gp-label\">Search a city or town</label><div class=\"gp-search\"><input class=\"gp-input\" v-model=\"locationQuery\" @input=\"searchLocation\" @keydown.down.prevent=\"moveSuggestion(1)\" @keydown.up.prevent=\"moveSuggestion(-1)\" @keydown.enter.prevent=\"chooseHighlighted\" placeholder=\"Try Colombo, London, Tokyo...\" autocomplete=\"off\"/><span v-if=\"searching\" class=\"gp-spin\">◌</span></div><div v-if=\"suggestions.length\" class=\"gp-suggestions\"><button v-for=\"(s,i) in suggestions\" :key=\"s.id||i\" class=\"gp-suggestion\" :class=\"{highlighted:i===highlighted}\" @click=\"selectLocation(s)\"><b>{{s.name}}</b><small>{{[s.admin1,s.country].filter(Boolean).join(', ')}} · {{s.country_code||''}}</small></button></div><p class=\"gp-muted\" v-if=\"locationError\">{{locationError}}</p><div class=\"gp-selected\" v-if=\"location\"><b>📍 {{location.location_name}}</b><span>{{[location.admin1,location.country].filter(Boolean).join(', ')}}</span><small v-if=\"location.latitude!=null\">{{Number(location.latitude).toFixed(4)}}°, {{Number(location.longitude).toFixed(4)}}°</small><small>Confirmed by backend</small></div><p class=\"gp-muted\" v-else>No location confirmed yet.</p></section>\n </div>\n <div class=\"gp-grid gp-main\">\n  <section class=\"gp-card\"><h2>✨ Gemini Care Intelligence <span class=\"gp-priority\" :class=\"(ai?.priority||'').toLowerCase()\">{{ai?.priority||'AWAITING AI'}}</span></h2><blockquote class=\"gp-quote\">{{ai?.care_quote||'Waiting for AI care analysis...'}}</blockquote><h3>Condition summary</h3><p>{{ai?.condition_summary||'No analysis yet.'}}</p><h3>Recommended care</h3><p>{{ai?.care_tip||'Care recommendations will appear here.'}}</p><h3>Weather insight</h3><p>{{ai?.weather_summary||'Weather analysis pending.'}}</p><h3>Relevant email alerts</h3><p>{{ai?.alert_summary||'No summarized incoming alerts yet.'}}</p></section>\n  <section class=\"gp-card\"><h2>✉️ Notification Center</h2><div class=\"gp-tabs\"><button :class=\"{active:tab==='recipients'}\" @click=\"tab='recipients'\">Recipients</button><button :class=\"{active:tab==='alerts'}\" @click=\"tab='alerts'\">Recent Alerts <span>{{notifications.length}}</span></button></div><div v-if=\"tab==='recipients'\"><label class=\"gp-label\">Recipient email</label><div class=\"gp-row\"><input class=\"gp-input\" v-model=\"recipientEmail\" type=\"email\" placeholder=\"farmer@example.com\"/><button class=\"gp-btn\" @click=\"addRecipient\">+ Add</button></div><div class=\"gp-checks\"><label v-for=\"c in categories\" :key=\"c.key\"><input type=\"checkbox\" v-model=\"preferences[c.key]\"/> {{c.label}}</label></div><p class=\"gp-muted\">Preferences apply to newly added recipients. Backend confirmation is required.</p><div v-if=\"recipients.length\" class=\"gp-recipient\" v-for=\"r in recipients\" :key=\"r.email||r.id\"><div><b>{{r.email_masked||r.email||'Recipient'}}</b><small>{{r.enabled===false?'Disabled':'Enabled'}}</small></div><div class=\"gp-row\"><button class=\"gp-btn-secondary\" v-if=\"r.email\" @click=\"recipientAction('SEND_TEST_EMAIL',r.email)\">Send Test</button><button class=\"gp-btn-secondary\" v-if=\"r.email\" @click=\"recipientAction('REMOVE_RECIPIENT',r.email)\">Remove</button></div></div><button class=\"gp-btn-secondary gp-refresh\" @click=\"send({payload:{action:'GET_STATE'}})\">Refresh Settings</button></div><div v-else><div v-for=\"n in notifications\" :key=\"n.notification_id\" class=\"gp-alert\"><div class=\"gp-row\"><b>{{n.title||n.type||'Notification'}}</b><span class=\"gp-priority\" :class=\"(n.priority||'info').toLowerCase()\">{{n.priority||'INFO'}}</span></div><p>{{n.summary||'No summary'}}</p><small>{{n.generated_at||''}} · {{n.email_status||'PENDING'}}</small></div><p v-if=\"!notifications.length\" class=\"gp-empty\">No notifications received yet. Historical alerts require a backend state response.</p></div><p v-if=\"notice\" class=\"gp-muted\">{{notice}}</p></section>\n </div>\n <footer class=\"gp-footer\">GreenPulse · Device device01 · MQTT/TLS · Node-RED Dashboard 2.0</footer>\n</div>\n</template>\n<script>\nexport default {\n data(){return {snapshot:{},plants:[\"Tomato\", \"Cherry Tomato\", \"Bell Pepper\", \"Chilli Pepper\", \"Cucumber\", \"Eggplant\", \"Zucchini\", \"Okra\", \"Green Bean\", \"Pea\", \"Strawberry\", \"Melon\", \"Watermelon\", \"Lettuce\", \"Spinach\", \"Kale\", \"Swiss Chard\", \"Arugula\", \"Pak Choi\", \"Cabbage\", \"Celery\", \"Basil\", \"Mint\", \"Coriander\", \"Parsley\", \"Dill\", \"Oregano\", \"Thyme\", \"Rosemary\", \"Sage\", \"Chives\", \"Radish\", \"Beetroot\", \"Carrot\", \"Spring Onion\", \"Broccoli\", \"Cauliflower\"],plantSelection:'',locationQuery:'',suggestions:[],searching:false,locationError:'',highlighted:0,searchTimer:null,searchController:null,tab:'recipients',recipientEmail:'',preferences:{enabled:true,watering_alerts:true,temperature_alerts:true,humidity_alerts:true,weather_alerts:true,system_alerts:true,daily_summary:true},notice:'',categories:[{key:'watering_alerts',label:'💧 Watering'},{key:'temperature_alerts',label:'🌡️ Temperature'},{key:'humidity_alerts',label:'💨 Humidity'},{key:'weather_alerts',label:'⛈️ Weather'},{key:'system_alerts',label:'🚨 System'},{key:'daily_summary',label:'📋 Daily'}],metrics:[{key:'air_temperature',title:'Air Temperature',unit:'°C',icon:'🌡️',max:50},{key:'humidity',title:'Humidity',unit:'%',icon:'💧',max:100},{key:'soil_moisture',title:'Soil Moisture',unit:'%',icon:'🌱',max:100},{key:'soil_temperature',title:'Soil Temperature',unit:'°C',icon:'🌡️',max:45}]}} ,\n computed:{telemetry(){return this.snapshot.telemetry||null},profile(){return this.snapshot.profile||null},ai(){const a=this.snapshot.ai;return a&&(!this.profile||!a.plant||a.plant===this.profile.plant)?a:null},location(){return this.snapshot.location||null},recipients(){return this.snapshot.settings?.recipients||[]},notifications(){return this.snapshot.notifications||[]},deviceOnline(){const status=this.snapshot.status;const raw=typeof status==='string'?status:(status?.status||status?.state||'');const flag=String(raw).toUpperCase();const last=Date.parse(this.snapshot.lastTelemetry||\"\");const recent=last>0&&(Date.now()-last<20000);return flag!=='OFFLINE'&&recent},deviceLabel(){const status=this.snapshot.status;const flag=String(typeof status==='string'?status:(status?.status||status?.state||'')).toUpperCase();if(flag==='OFFLINE')return 'DEVICE OFFLINE';if(this.deviceOnline)return 'DEVICE ONLINE';return this.snapshot.lastTelemetry?'DEVICE OFFLINE · NO TELEMETRY':'DEVICE STATUS UNKNOWN'},lastSeen(){return this.snapshot.lastTelemetry?'Last telemetry: '+new Date(this.snapshot.lastTelemetry).toLocaleTimeString():'Waiting for telemetry'}},\n watch:{msg:{deep:true,handler(v){if(v?.topic==='gp/state'&&v.payload){this.snapshot=v.payload;if(this.profile?.plant)this.plantSelection=this.profile.plant;if(this.location&&!this.locationQuery)this.locationQuery=[this.location.location_name,this.location.country].filter(Boolean).join(', ');}}}},\n mounted(){this.send({payload:{action:'REQUEST_STATE'}});this._refresh=setInterval(()=>this.$forceUpdate(),5000)},\n beforeUnmount(){clearTimeout(this.searchTimer);if(this.searchController)this.searchController.abort();clearInterval(this._refresh)},\n methods:{valueText(m){const v=this.telemetry?.[m.key];return typeof v==='number'&&Number.isFinite(v)?v.toFixed(1):'—'},barWidth(m){const v=Number(this.telemetry?.[m.key]);return Number.isFinite(v)&&this.telemetry?.[m.key]!=null?Math.max(0,Math.min(100,v/m.max*100)):0},range(m){return this.profile?.[m.key]},rangeText(m){const r=this.range(m);return r&&Number.isFinite(Number(r.min))&&Number.isFinite(Number(r.max))?`${r.min}–${r.max} ${m.unit}`:'Awaiting crop thresholds'},metricState(m){const v=this.telemetry?.[m.key],r=this.range(m);if(typeof v!=='number'||!r)return '—';return v<r.min?'LOW':v>r.max?'HIGH':'NORMAL'},metricColor(m){const s=this.metricState(m);return s==='NORMAL'?'#10b981':s==='HIGH'?'#fb7185':s==='LOW'?'#fbbf24':'#64748b'},setPlant(){if(this.plants.includes(this.plantSelection))this.send({payload:{action:'SET_PLANT',plant:this.plantSelection}})},moveSuggestion(d){if(this.suggestions.length)this.highlighted=(this.highlighted+d+this.suggestions.length)%this.suggestions.length},chooseHighlighted(){if(this.suggestions[this.highlighted])this.selectLocation(this.suggestions[this.highlighted])},searchLocation(){clearTimeout(this.searchTimer);if(this.searchController)this.searchController.abort();this.suggestions=[];this.highlighted=0;this.locationError='';const q=this.locationQuery.trim();if(q.length<3){this.searching=false;return}this.searchTimer=setTimeout(()=>this.fetchLocations(q),400)},async fetchLocations(q){this.searchController=new AbortController();this.searching=true;try{const url='https://geocoding-api.open-meteo.com/v1/search?name='+encodeURIComponent(q)+'&count=8&language=en&format=json';const res=await fetch(url,{signal:this.searchController.signal});if(!res.ok)throw new Error('Geocoding service unavailable');const data=await res.json();if(this.locationQuery.trim()!==q)return;this.suggestions=Array.isArray(data.results)?data.results:[];if(!this.suggestions.length)this.locationError='No matching locations found.'}catch(e){if(e.name!=='AbortError')this.locationError='Location search failed. Please retry.'}finally{if(this.locationQuery.trim()===q)this.searching=false}},selectLocation(s){if(!s.name||!s.country||!s.id)return;this.locationQuery=[s.name,s.admin1,s.country].filter(Boolean).join(', ');this.suggestions=[];this.send({payload:{action:'SET_LOCATION',location:{location_name:s.name,admin1:s.admin1||'',country:s.country,country_code:s.country_code||'',geocoding_id:s.id,latitude:s.latitude,longitude:s.longitude}}});this.notice='Location submitted. Waiting for backend confirmation.'},addRecipient(){const email=this.recipientEmail.trim();if(!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email)){this.notice='Enter a valid email address.';return}this.send({payload:{action:'ADD_RECIPIENT',email,preferences:{...this.preferences}}});this.recipientEmail='';this.notice='Recipient request sent. Waiting for backend confirmation.'},recipientAction(action,email){this.send({payload:{action,email}});this.notice=action+' request sent.'}}\n}\n</script>\n<style>\n.gp-shell{color:#e2e8f0;font-family:Inter,ui-sans-serif,system-ui,sans-serif;padding:8px 3px 22px;max-width:1600px;margin:auto}.gp-header{display:flex;justify-content:space-between;align-items:center;gap:16px;margin:6px 0 24px;flex-wrap:wrap}.gp-eyebrow{font-size:11px;letter-spacing:2.5px;color:#34d399;font-weight:800}.gp-header h1{font-size:clamp(24px,3vw,35px);margin:7px 0;font-weight:800;line-height:1.15}.gp-header h1 span{color:#34d399}.gp-header p,.gp-muted{color:#94a3b8;font-size:13px}.gp-live{border:1px solid #475569;border-radius:50px;padding:10px 13px;font-size:11px;font-weight:800;letter-spacing:.4px;display:flex;gap:9px;align-items:center}.gp-live.online{color:#34d399;border-color:#065f46}.gp-live.offline{color:#fbbf24}.gp-dot{width:9px;height:9px;border-radius:50%;background:currentColor}.gp-section-title{display:flex;justify-content:space-between;align-items:center;font-size:16px;font-weight:750;margin-bottom:12px}.gp-section-title span{font-size:12px;font-weight:400;color:#94a3b8}.gp-grid{display:grid;gap:14px}.gp-metrics{grid-template-columns:repeat(5,minmax(0,1fr));margin-bottom:14px}.gp-main{grid-template-columns:repeat(2,minmax(0,1fr));margin-bottom:14px;align-items:stretch}.gp-card{background:#1e293b;border:1px solid #334155;border-radius:14px;padding:20px;min-width:0;box-shadow:0 8px 24px #0206171c}.gp-card h2{font-size:16px;font-weight:750;margin:0 0 20px;display:flex;justify-content:space-between;align-items:center;gap:10px}.gp-card h3{font-size:12px;color:#34d399;margin:16px 0 5px}.gp-card p{font-size:13px;line-height:1.6}.gp-metric{padding:16px}.gp-metric-label{font-size:11px;color:#94a3b8;font-weight:700;letter-spacing:.4px}.gp-reading{font-size:clamp(22px,2.3vw,32px);font-weight:800;margin:16px 0 13px;white-space:nowrap}.gp-reading small{font-size:13px;font-weight:500;color:#94a3b8}.gp-light{font-size:18px}.gp-meter{height:7px;background:#334155;border-radius:10px;overflow:hidden}.gp-fill{height:100%;border-radius:10px;transition:width .3s}.gp-hint{display:flex;justify-content:space-between;gap:6px;font-size:10px;color:#94a3b8;margin-top:10px}.gp-label{display:block;font-size:12px;color:#cbd5e1;font-weight:600;margin:0 0 8px}.gp-row{display:flex;align-items:center;gap:8px;justify-content:space-between}.gp-input{background:#0f172a!important;color:#e2e8f0!important;border:1px solid #475569!important;border-radius:9px!important;padding:11px 12px!important;font-size:13px!important;outline:none!important;width:100%;min-width:0}.gp-input:focus{border-color:#10b981!important}.gp-btn{background:#10b981;color:#052e24;font-weight:800;border:0;border-radius:9px;padding:11px 15px;white-space:nowrap;cursor:pointer}.gp-btn:disabled{opacity:.5}.gp-btn-secondary{border:1px solid #475569;color:#e2e8f0;background:#334155;border-radius:8px;padding:8px 10px;font-size:11px;cursor:pointer}.gp-thresholds{margin-top:18px}.gp-thresholds>div{display:flex;justify-content:space-between;gap:10px;padding:10px 0;border-bottom:1px solid #334155;font-size:12px}.gp-thresholds span{color:#94a3b8}.gp-thresholds b{color:#34d399}.gp-search{position:relative}.gp-spin{position:absolute;right:12px;top:10px;color:#34d399;font-size:20px}.gp-suggestions{border:1px solid #475569;background:#0f172a;border-radius:10px;margin-top:5px;max-height:265px;overflow-y:auto}.gp-suggestion{display:flex;flex-direction:column;width:100%;text-align:left;background:transparent;border:0;color:#e2e8f0;padding:10px 13px;border-bottom:1px solid #334155;cursor:pointer}.gp-suggestion:hover,.gp-suggestion.highlighted{background:#334155}.gp-suggestion small{color:#94a3b8;margin-top:3px}.gp-selected{display:flex;flex-direction:column;gap:5px;border:1px solid #065f46;background:#064e3b30;border-radius:10px;padding:12px;margin-top:14px}.gp-selected b{color:#6ee7b7}.gp-selected span,.gp-selected small{font-size:11px;color:#94a3b8}.gp-quote{border-left:3px solid #10b981;padding:9px 13px;background:#064e3b26;color:#d1fae5;margin:0 0 18px;font-style:italic;font-size:14px}.gp-priority{border-radius:20px;background:#334155;color:#cbd5e1;padding:5px 9px;font-size:10px;font-weight:800;white-space:nowrap}.gp-priority.high,.gp-priority.critical{background:#7f1d1d;color:#fecaca}.gp-priority.medium{background:#78350f;color:#fde68a}.gp-priority.low,.gp-priority.info{background:#064e3b;color:#6ee7b7}.gp-tabs{display:flex;gap:8px;border-bottom:1px solid #334155;margin-bottom:16px}.gp-tabs button{background:transparent;color:#94a3b8;border:0;padding:9px 12px;cursor:pointer;border-bottom:2px solid transparent}.gp-tabs button.active{color:#34d399;border-color:#10b981}.gp-checks{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:18px 0}.gp-checks label{font-size:12px}.gp-checks input{accent-color:#10b981}.gp-recipient{display:flex;justify-content:space-between;align-items:center;gap:10px;border-top:1px solid #334155;padding:12px 0}.gp-recipient small{display:block;color:#94a3b8;margin-top:4px}.gp-refresh{margin-top:12px}.gp-alert{padding:13px 0;border-bottom:1px solid #334155}.gp-alert p{margin:7px 0}.gp-alert small{color:#94a3b8}.gp-empty{color:#94a3b8;font-style:italic}.gp-footer{font-size:11px;color:#64748b;text-align:center;margin:18px 0}@media(max-width:1100px){.gp-metrics{grid-template-columns:repeat(3,minmax(0,1fr))}}@media(max-width:760px){.gp-main{grid-template-columns:1fr}.gp-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.gp-card{padding:15px}}@media(max-width:400px){.gp-metrics{grid-template-columns:1fr}.gp-row{flex-wrap:wrap}.gp-btn{width:100%}}\n</style>",
+    "storeOutMessages": true,
+    "passthru": true,
+    "resendOnRefresh": true,
+    "templateScope": "local",
+    "className": "",
+    "x": 880,
+    "y": 190,
+    "wires": [
+      [
+        "gp_action_final"
+      ]
+    ]
+  },
+  {
+    "id": "gp_action_final",
+    "type": "function",
+    "z": "gp_tab_final",
+    "name": "Dashboard Actions",
+    "func": "const p=msg.payload||{};\nif(!p || typeof p!=='object')return null;\nconst action=String(p.action||'');\nif(action==='REQUEST_STATE')return [null,{topic:'gp/state',payload:flow.get('gp_dashboard_state')||{}}];\nlet topic=null,body=null,qos='1';\nif(action==='SET_PLANT'){\n  if(typeof p.plant!=='string'||!p.plant.trim())return null;\n  topic='greenpulse/device01/config';body={plant_type:p.plant.trim()};qos='0';\n}else if(action==='SET_LOCATION'){\n  const loc=p.location;\n  if(!loc||!Number.isFinite(Number(loc.latitude))||!Number.isFinite(Number(loc.longitude))||!loc.location_name||!loc.country||!loc.geocoding_id)return null;\n  if(Number(loc.latitude)===0&&Number(loc.longitude)===0)return null;\n  topic='greenpulse/device01/location';body={device_id:'device01',...loc};\n}else if(['ADD_RECIPIENT','REMOVE_RECIPIENT','SEND_TEST_EMAIL','GET_STATE','UPDATE_RECIPIENT'].includes(action)){\n  topic='greenpulse/device01/notification/settings';body={...p,request_id:p.request_id||('nr-'+Date.now()+'-'+Math.random().toString(36).slice(2,8))};\n}else return null;\nreturn [{topic,payload:JSON.stringify(body),qos,retain:false},null];",
+    "outputs": 2,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 1130,
+    "y": 190,
+    "wires": [
+      [
+        "gp_cmd_final"
+      ],
+      [
+        "gp_ui_final"
+      ]
+    ]
+  },
+  {
+    "id": "gp_mqtt_status_final",
+    "type": "status",
+    "z": "gp_tab_final",
+    "name": "HiveMQ Connection Status",
+    "scope": [
+      "gp_tel_final",
+      "gp_status_final",
+      "gp_profile_final",
+      "gp_ai_final",
+      "gp_cmd_final",
+      "gp_loc_resolved_final",
+      "gp_notify_settings_final",
+      "gp_notify_event_final",
+      "gp_notify_status_final"
+    ],
+    "x": 180,
+    "y": 420,
+    "wires": [
+      [
+        "gp_mqtt_status_fn_final"
+      ]
+    ]
+  },
+  {
+    "id": "gp_mqtt_status_fn_final",
+    "type": "function",
+    "z": "gp_tab_final",
+    "name": "Normalize MQTT Status",
+    "func": "let s=msg.status||{};const text=String(s.text||'').toLowerCase();const fill=String(s.fill||'').toLowerCase();msg.topic='greenpulse/dashboard/mqtt';msg.payload=(text.includes('disconnected')||text.includes('not connected')||fill==='red')?'DISCONNECTED':(text.includes('connected')||fill==='green')?'CONNECTED':'CONNECTING';return msg;",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 410,
+    "y": 420,
+    "wires": [
+      [
+        "gp_state_final"
+      ]
+    ]
+  },
+  {
+    "id": "gp_loc_resolved_final",
+    "type": "mqtt in",
+    "z": "gp_tab_final",
+    "name": "location/resolved",
+    "topic": "greenpulse/device01/location/resolved",
+    "qos": "1",
+    "datatype": "auto-detect",
+    "broker": "gp_broker_final",
+    "nl": false,
+    "rap": true,
+    "rh": 0,
+    "inputs": 0,
+    "x": 150,
+    "y": 510,
+    "wires": [
+      [
+        "gp_norm_final"
+      ]
+    ]
+  },
+  {
+    "id": "gp_notify_settings_final",
+    "type": "mqtt in",
+    "z": "gp_tab_final",
+    "name": "notification/settings/state",
+    "topic": "greenpulse/device01/notification/settings/state",
+    "qos": "1",
+    "datatype": "auto-detect",
+    "broker": "gp_broker_final",
+    "nl": false,
+    "rap": true,
+    "rh": 0,
+    "inputs": 0,
+    "x": 150,
+    "y": 560,
+    "wires": [
+      [
+        "gp_norm_final"
+      ]
+    ]
+  },
+  {
+    "id": "gp_notify_event_final",
+    "type": "mqtt in",
+    "z": "gp_tab_final",
+    "name": "notifications",
+    "topic": "greenpulse/device01/notifications",
+    "qos": "1",
+    "datatype": "auto-detect",
+    "broker": "gp_broker_final",
+    "nl": false,
+    "rap": true,
+    "rh": 0,
+    "inputs": 0,
+    "x": 150,
+    "y": 610,
+    "wires": [
+      [
+        "gp_norm_final"
+      ]
+    ]
+  },
+  {
+    "id": "gp_notify_status_final",
+    "type": "mqtt in",
+    "z": "gp_tab_final",
+    "name": "notification/status",
+    "topic": "greenpulse/device01/notification/status",
+    "qos": "1",
+    "datatype": "auto-detect",
+    "broker": "gp_broker_final",
+    "nl": false,
+    "rap": true,
+    "rh": 0,
+    "inputs": 0,
+    "x": 150,
+    "y": 660,
+    "wires": [
+      [
+        "gp_norm_final"
+      ]
+    ]
+  },
+  {
+    "id": "gp_cmd_final",
+    "type": "mqtt out",
+    "z": "gp_tab_final",
+    "name": "Publish Dashboard Commands",
+    "topic": "",
+    "qos": "",
+    "retain": "",
+    "respTopic": "",
+    "contentType": "",
+    "userProps": "",
+    "correl": "",
+    "expiry": "",
+    "broker": "gp_broker_final",
+    "x": 1380,
+    "y": 340,
+    "wires": []
+  }
+]
