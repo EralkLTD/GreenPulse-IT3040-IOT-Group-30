@@ -1,0 +1,686 @@
+<!--
+  GREENPULSE - NOTIFICATION CENTER COMPONENT
+  Node-RED Dashboard 2.0 ui-template
+  
+  Features:
+  - Add, edit, enable/disable, and remove email recipients
+  - Per-category preferences: Watering, Temperature, Humidity, Weather, Critical, Daily Summary
+  - Rate-limited "Send Test Email" action with real-time delivery status feedback
+  - Live alert feed and historical notification viewer with priority badges
+  - Synchronizes bidirectionally via MQTT:
+      Subscribes: greenpulse/device01/notification/settings/state
+                  greenpulse/device01/notifications
+      Publishes:  greenpulse/device01/notification/settings
+-->
+<div id="gp-nc-root" class="gp-nc-container">
+  <div class="gp-nc-header">
+    <div class="gp-nc-title-wrap">
+      <span class="gp-nc-icon">🔔</span>
+      <h3 class="gp-nc-title">Notification Center & Alerts</h3>
+    </div>
+    <div class="gp-nc-tabs">
+      <button id="gp-tab-recipients" class="gp-tab-btn gp-tab-active">Recipients</button>
+      <button id="gp-tab-history" class="gp-tab-btn">Recent Alerts <span id="gp-alert-badge" class="gp-count-pill" style="display:none;">0</span></button>
+    </div>
+  </div>
+
+  <!-- PANEL 1: RECIPIENT MANAGEMENT -->
+  <div id="gp-panel-recipients" class="gp-panel">
+    <!-- Add Recipient Form -->
+    <div class="gp-form-card">
+      <div class="gp-form-row">
+        <input
+          type="email"
+          id="gp-input-email"
+          class="gp-email-input"
+          placeholder="Enter recipient email (e.g. grower@example.com)..."
+          autocomplete="email"
+        />
+        <button id="gp-btn-add-rec" class="gp-btn-primary">+ Add Recipient</button>
+      </div>
+
+      <!-- Category Preferences for New Recipient -->
+      <div class="gp-prefs-grid">
+        <label class="gp-checkbox-label">
+          <input type="checkbox" id="gp-pref-water" checked />
+          <span>💧 Watering</span>
+        </label>
+        <label class="gp-checkbox-label">
+          <input type="checkbox" id="gp-pref-temp" checked />
+          <span>🌡️ Temp</span>
+        </label>
+        <label class="gp-checkbox-label">
+          <input type="checkbox" id="gp-pref-hum" checked />
+          <span>💨 Humidity</span>
+        </label>
+        <label class="gp-checkbox-label">
+          <input type="checkbox" id="gp-pref-weather" checked />
+          <span>⛈️ Weather</span>
+        </label>
+        <label class="gp-checkbox-label">
+          <input type="checkbox" id="gp-pref-crit" checked />
+          <span>🚨 Critical</span>
+        </label>
+        <label class="gp-checkbox-label">
+          <input type="checkbox" id="gp-pref-summary" checked />
+          <span>📋 Daily (08:00)</span>
+        </label>
+      </div>
+
+      <div id="gp-form-msg" class="gp-status-msg" style="display: none;"></div>
+    </div>
+
+    <!-- Active Recipients List -->
+    <div class="gp-list-header">Configured Email Recipients (<span id="gp-rec-count">0</span>)</div>
+    <div id="gp-recipients-list" class="gp-recipients-list">
+      <div class="gp-empty-state">No recipients added yet. Enter an email above to subscribe to automated greenhouse alerts.</div>
+    </div>
+  </div>
+
+  <!-- PANEL 2: NOTIFICATION HISTORY -->
+  <div id="gp-panel-history" class="gp-panel" style="display: none;">
+    <div class="gp-history-actions">
+      <span class="gp-history-subtitle">Intelligent Condition Events & AI Care Quotes</span>
+      <button id="gp-btn-refresh-hist" class="gp-btn-subtle">🔄 Refresh</button>
+    </div>
+    <div id="gp-history-list" class="gp-history-list">
+      <div class="gp-empty-state">No alert history recorded yet. Monitored conditions will appear here when thresholds are reached.</div>
+    </div>
+  </div>
+</div>
+
+<style>
+  .gp-nc-container {
+    background: linear-gradient(135deg, rgba(15, 23, 42, 0.90) 0%, rgba(30, 41, 59, 0.92) 100%);
+    backdrop-filter: blur(14px);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 14px;
+    padding: 20px;
+    color: #f8fafc;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    box-shadow: 0 10px 35px rgba(0, 0, 0, 0.4);
+    box-sizing: border-box;
+  }
+
+  .gp-nc-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    padding-bottom: 14px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .gp-nc-title-wrap {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .gp-nc-icon {
+    font-size: 1.3rem;
+  }
+
+  .gp-nc-title {
+    margin: 0;
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #f1f5f9;
+  }
+
+  .gp-nc-tabs {
+    display: flex;
+    background: rgba(15, 23, 42, 0.6);
+    padding: 3px;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  .gp-tab-btn {
+    background: none;
+    border: none;
+    color: #94a3b8;
+    padding: 6px 14px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .gp-tab-btn.gp-tab-active {
+    background: #10b981;
+    color: #ffffff;
+    box-shadow: 0 2px 8px rgba(16, 185, 129, 0.35);
+  }
+
+  .gp-count-pill {
+    background: #ef4444;
+    color: white;
+    font-size: 0.68rem;
+    padding: 1px 6px;
+    border-radius: 999px;
+  }
+
+  .gp-form-card {
+    background: rgba(15, 23, 42, 0.5);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 10px;
+    padding: 16px;
+    margin-bottom: 18px;
+  }
+
+  .gp-form-row {
+    display: flex;
+    gap: 10px;
+  }
+
+  .gp-email-input {
+    flex: 1;
+    background: rgba(15, 23, 42, 0.85);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 8px;
+    padding: 10px 14px;
+    color: #f8fafc;
+    font-size: 0.9rem;
+    outline: none;
+    box-sizing: border-box;
+  }
+
+  .gp-email-input:focus {
+    border-color: #10b981;
+    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.2);
+  }
+
+  .gp-btn-primary {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    border: none;
+    color: white;
+    padding: 10px 18px;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 0.88rem;
+    cursor: pointer;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+    white-space: nowrap;
+  }
+
+  .gp-btn-primary:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+  }
+
+  .gp-prefs-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(115px, 1fr));
+    gap: 10px;
+    margin-top: 14px;
+  }
+
+  .gp-checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.8rem;
+    color: #cbd5e1;
+    cursor: pointer;
+    user-select: none;
+  }
+
+  .gp-checkbox-label input {
+    accent-color: #10b981;
+    cursor: pointer;
+  }
+
+  .gp-status-msg {
+    margin-top: 10px;
+    font-size: 0.82rem;
+    padding: 8px 12px;
+    border-radius: 6px;
+    animation: fadeIn 0.2s ease;
+  }
+
+  .gp-msg-success {
+    background: rgba(16, 185, 129, 0.15);
+    color: #6ee7b7;
+    border: 1px solid rgba(16, 185, 129, 0.3);
+  }
+
+  .gp-msg-error {
+    background: rgba(239, 68, 68, 0.15);
+    color: #fca5a5;
+    border: 1px solid rgba(239, 68, 68, 0.3);
+  }
+
+  .gp-list-header {
+    font-size: 0.82rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    color: #94a3b8;
+    margin-bottom: 10px;
+  }
+
+  .gp-recipients-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .gp-rec-card {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: rgba(15, 23, 42, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 10px;
+    padding: 12px 16px;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .gp-rec-info {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .gp-rec-email {
+    font-size: 0.94rem;
+    font-weight: 600;
+    color: #f8fafc;
+  }
+
+  .gp-rec-tags {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+
+  .gp-tag {
+    font-size: 0.68rem;
+    padding: 2px 6px;
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.08);
+    color: #cbd5e1;
+  }
+
+  .gp-rec-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .gp-btn-test {
+    background: rgba(59, 130, 246, 0.15);
+    border: 1px solid rgba(59, 130, 246, 0.3);
+    color: #93c5fd;
+    border-radius: 6px;
+    padding: 6px 12px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .gp-btn-test:hover {
+    background: rgba(59, 130, 246, 0.3);
+    color: #ffffff;
+  }
+
+  .gp-btn-del {
+    background: rgba(239, 68, 68, 0.15);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    color: #fca5a5;
+    border-radius: 6px;
+    padding: 6px 10px;
+    font-size: 0.78rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .gp-btn-del:hover {
+    background: rgba(239, 68, 68, 0.3);
+    color: #ffffff;
+  }
+
+  .gp-history-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+  }
+
+  .gp-history-subtitle {
+    font-size: 0.8rem;
+    color: #94a3b8;
+  }
+
+  .gp-btn-subtle {
+    background: none;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: #94a3b8;
+    border-radius: 6px;
+    padding: 4px 10px;
+    font-size: 0.75rem;
+    cursor: pointer;
+  }
+
+  .gp-btn-subtle:hover {
+    color: #ffffff;
+    border-color: rgba(255, 255, 255, 0.25);
+  }
+
+  .gp-history-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    max-height: 420px;
+    overflow-y: auto;
+  }
+
+  .gp-hist-card {
+    background: rgba(15, 23, 42, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 10px;
+    padding: 14px;
+    border-left: 4px solid #10b981;
+  }
+
+  .gp-hist-card-critical { border-left-color: #ef4444; }
+  .gp-hist-card-high { border-left-color: #f97316; }
+  .gp-hist-card-medium { border-left-color: #eab308; }
+  .gp-hist-card-low { border-left-color: #3b82f6; }
+  .gp-hist-card-info { border-left-color: #10b981; }
+
+  .gp-hist-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+  }
+
+  .gp-hist-title {
+    font-size: 0.94rem;
+    font-weight: 600;
+    color: #ffffff;
+  }
+
+  .gp-hist-pill {
+    font-size: 0.7rem;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 999px;
+    text-transform: uppercase;
+  }
+
+  .gp-pill-critical { background: rgba(239, 68, 68, 0.2); color: #fca5a5; }
+  .gp-pill-high { background: rgba(249, 115, 22, 0.2); color: #fdba74; }
+  .gp-pill-medium { background: rgba(234, 179, 8, 0.2); color: #fde047; }
+  .gp-pill-low { background: rgba(59, 130, 246, 0.2); color: #93c5fd; }
+  .gp-pill-info { background: rgba(16, 185, 129, 0.2); color: #6ee7b7; }
+
+  .gp-hist-summary {
+    font-size: 0.84rem;
+    color: #cbd5e1;
+    line-height: 1.4;
+    margin-bottom: 8px;
+  }
+
+  .gp-hist-tip {
+    background: rgba(16, 185, 129, 0.08);
+    border-left: 3px solid #10b981;
+    padding: 8px 10px;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    color: #d1fae5;
+    margin-bottom: 8px;
+  }
+
+  .gp-hist-foot {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.72rem;
+    color: #64748b;
+  }
+
+  .gp-empty-state {
+    text-align: center;
+    padding: 30px 20px;
+    color: #64748b;
+    font-size: 0.86rem;
+    background: rgba(15, 23, 42, 0.3);
+    border-radius: 8px;
+    border: 1px dashed rgba(255, 255, 255, 0.1);
+  }
+</style>
+
+<script>
+  (function () {
+    const root = document.getElementById("gp-nc-root");
+    if (!root) return;
+
+    const tabRecipients = document.getElementById("gp-tab-recipients");
+    const tabHistory = document.getElementById("gp-tab-history");
+    const panelRecipients = document.getElementById("gp-panel-recipients");
+    const panelHistory = document.getElementById("gp-panel-history");
+
+    const inputEmail = document.getElementById("gp-input-email");
+    const btnAddRec = document.getElementById("gp-btn-add-rec");
+    const formMsg = document.getElementById("gp-form-msg");
+    const recList = document.getElementById("gp-recipients-list");
+    const recCount = document.getElementById("gp-rec-count");
+    const histList = document.getElementById("gp-history-list");
+    const btnRefreshHist = document.getElementById("gp-btn-refresh-hist");
+    const alertBadge = document.getElementById("gp-alert-badge");
+
+    let recipients = [];
+    let historyItems = [];
+
+    // Tabs toggle
+    tabRecipients.addEventListener("click", () => {
+      tabRecipients.classList.add("gp-tab-active");
+      tabHistory.classList.remove("gp-tab-active");
+      panelRecipients.style.display = "block";
+      panelHistory.style.display = "none";
+    });
+
+    tabHistory.addEventListener("click", () => {
+      tabHistory.classList.add("gp-tab-active");
+      tabRecipients.classList.remove("gp-tab-active");
+      panelHistory.style.display = "block";
+      panelRecipients.style.display = "none";
+      alertBadge.style.display = "none";
+    });
+
+    // Node-RED Dashboard 2.0 message handler
+    if (typeof this !== "undefined" && this.on) {
+      this.on("input", function (msg) {
+        if (!msg || !msg.payload) return;
+        let payload = msg.payload;
+        if (typeof payload === "string") {
+          try { payload = JSON.parse(payload); } catch(e) { return; }
+        }
+
+        // State snapshot
+        if (payload.recipients && Array.isArray(payload.recipients)) {
+          recipients = payload.recipients;
+          renderRecipients();
+        }
+        if (payload.recent_notifications && Array.isArray(payload.recent_notifications)) {
+          historyItems = payload.recent_notifications;
+          renderHistory();
+        }
+
+        // Live notification event
+        if (payload.notification_id && payload.type) {
+          historyItems.unshift(payload);
+          renderHistory();
+          alertBadge.textContent = historyItems.length;
+          alertBadge.style.display = "inline-block";
+        }
+      });
+    }
+
+    // Add Recipient button
+    btnAddRec.addEventListener("click", () => {
+      const email = inputEmail.value.trim().toLowerCase();
+      if (!validateEmail(email)) {
+        showMsg("Please enter a valid email address.", false);
+        return;
+      }
+
+      const prefs = {
+        enabled: true,
+        watering_alerts: document.getElementById("gp-pref-water").checked,
+        temperature_alerts: document.getElementById("gp-pref-temp").checked,
+        humidity_alerts: document.getElementById("gp-pref-hum").checked,
+        weather_alerts: document.getElementById("gp-pref-weather").checked,
+        system_alerts: document.getElementById("gp-pref-crit").checked,
+        daily_summary: document.getElementById("gp-pref-summary").checked,
+        daily_summary_time: "08:00",
+        daily_summary_timezone: "UTC",
+      };
+
+      sendMqttCommand({
+        action: "ADD_RECIPIENT",
+        email: email,
+        preferences: prefs,
+      });
+
+      inputEmail.value = "";
+      showMsg("Recipient command sent.", true);
+    });
+
+    btnRefreshHist.addEventListener("click", () => {
+      sendMqttCommand({ action: "GET_STATE" });
+    });
+
+    function renderRecipients() {
+      recCount.textContent = recipients.length;
+      if (!recipients.length) {
+        recList.innerHTML = '<div class="gp-empty-state">No recipients added yet. Enter an email above to subscribe to automated greenhouse alerts.</div>';
+        return;
+      }
+
+      recList.innerHTML = "";
+      recipients.forEach((rec) => {
+        const card = document.createElement("div");
+        card.className = "gp-rec-card";
+
+        const tags = [];
+        if (rec.watering_alerts) tags.push("Watering");
+        if (rec.temperature_alerts) tags.push("Temp");
+        if (rec.humidity_alerts) tags.push("Humidity");
+        if (rec.weather_alerts) tags.push("Weather");
+        if (rec.system_alerts) tags.push("Critical");
+        if (rec.daily_summary) tags.push("Daily Summary");
+
+        card.innerHTML = `
+          <div class="gp-rec-info">
+            <span class="gp-rec-email">${escapeHtml(rec.email)}</span>
+            <div class="gp-rec-tags">
+              ${tags.map(t => `<span class="gp-tag">${t}</span>`).join("")}
+            </div>
+          </div>
+          <div class="gp-rec-actions">
+            <button class="gp-btn-test" data-email="${escapeHtml(rec.email)}">✉️ Send Test</button>
+            <button class="gp-btn-del" data-email="${escapeHtml(rec.email)}">🗑️ Remove</button>
+          </div>
+        `;
+
+        card.querySelector(".gp-btn-test").addEventListener("click", (e) => {
+          const email = e.target.dataset.email;
+          sendMqttCommand({ action: "SEND_TEST_EMAIL", email: email });
+          e.target.disabled = true;
+          e.target.textContent = "Sending...";
+          setTimeout(() => {
+            e.target.disabled = false;
+            e.target.textContent = "✉️ Send Test";
+          }, 3000);
+          showMsg("Test email request queued for " + email, true);
+        });
+
+        card.querySelector(".gp-btn-del").addEventListener("click", (e) => {
+          const email = e.target.dataset.email;
+          if (confirm("Remove recipient " + email + "?")) {
+            sendMqttCommand({ action: "REMOVE_RECIPIENT", email: email });
+          }
+        });
+
+        recList.appendChild(card);
+      });
+    }
+
+    function renderHistory() {
+      if (!historyItems.length) {
+        histList.innerHTML = '<div class="gp-empty-state">No alert history recorded yet. Monitored conditions will appear here when thresholds are reached.</div>';
+        return;
+      }
+
+      histList.innerHTML = "";
+      historyItems.forEach((item) => {
+        const prio = (item.priority || "MEDIUM").toLowerCase();
+        const card = document.createElement("div");
+        card.className = `gp-hist-card gp-hist-card-${prio}`;
+
+        const safeTitle = escapeHtml(item.title || item.type || "Alert");
+        const safeSummary = escapeHtml(item.summary || "");
+        const safeTip = escapeHtml(item.care_tip || "");
+        const safePlant = escapeHtml(item.plant || "Crop");
+        const safeTime = item.generated_at ? new Date(item.generated_at).toLocaleTimeString() : "";
+        const emailStatus = item.email_status || "PENDING";
+
+        card.innerHTML = `
+          <div class="gp-hist-top">
+            <span class="gp-hist-title">${safeTitle}</span>
+            <span class="gp-hist-pill gp-pill-${prio}">${prio.toUpperCase()}</span>
+          </div>
+          <div class="gp-hist-summary">${safeSummary}</div>
+          ${safeTip ? `<div class="gp-hist-tip">💡 <strong>AI Tip:</strong> ${safeTip}</div>` : ""}
+          <div class="gp-hist-foot">
+            <span>🌱 ${safePlant} · ${safeTime}</span>
+            <span>Status: <strong>${emailStatus}</strong></span>
+          </div>
+        `;
+        histList.appendChild(card);
+      });
+    }
+
+    function sendMqttCommand(cmdObj) {
+      if (typeof scope !== "undefined" && scope.send) {
+        scope.send({
+          topic: "greenpulse/device01/notification/settings",
+          payload: cmdObj,
+        });
+      } else if (typeof this !== "undefined" && this.send) {
+        this.send({
+          topic: "greenpulse/device01/notification/settings",
+          payload: cmdObj,
+        });
+      }
+    }
+
+    function validateEmail(email) {
+      return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+    }
+
+    function showMsg(txt, isSuccess) {
+      formMsg.textContent = txt;
+      formMsg.className = "gp-status-msg " + (isSuccess ? "gp-msg-success" : "gp-msg-error");
+      formMsg.style.display = "block";
+      setTimeout(() => { formMsg.style.display = "none"; }, 4000);
+    }
+
+    function escapeHtml(str) {
+      return String(str).replace(/[&<>"']/g, function (m) {
+        return ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[m];
+      });
+    }
+  })();
+</script>
