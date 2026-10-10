@@ -1,0 +1,600 @@
+<!--
+  GREENPULSE - WORLDWIDE LOCATION AUTOCOMPLETE COMPONENT
+  Node-RED Dashboard 2.0 ui-template
+  
+  Features:
+  - Worldwide Open-Meteo Geocoding search (no API keys required)
+  - Debounced input (400ms) with AbortController for outdated request cancellation
+  - Displays City/Town, Region/Province, and Country
+  - Keyboard navigation (Arrow Up/Down, Enter, Escape)
+  - Clean error states, loading spinner, and empty state
+  - Subscribes to greenpulse/device01/location/resolved for persistent state restoration
+  - Publishes full location payload to greenpulse/device01/location
+  - Responsive, dark-mode glassmorphic styling matching GreenPulse
+-->
+<div id="gp-location-root" class="gp-location-container">
+  <div class="gp-header">
+    <div class="gp-title-wrap">
+      <span class="gp-icon">🌍</span>
+      <h3 class="gp-title">Greenhouse Location</h3>
+    </div>
+    <span id="gp-status-badge" class="gp-badge gp-badge-idle">Ready</span>
+  </div>
+
+  <!-- Selected Location Display Card -->
+  <div id="gp-selected-card" class="gp-selected-card" style="display: none;">
+    <div class="gp-card-left">
+      <div class="gp-loc-pin">📍</div>
+      <div>
+        <div id="gp-selected-name" class="gp-loc-name">--</div>
+        <div id="gp-selected-coords" class="gp-loc-coords">Lat: --, Lon: --</div>
+      </div>
+    </div>
+    <button id="gp-btn-change" class="gp-btn-change" title="Change Location">Change</button>
+  </div>
+
+  <!-- Search Input & Suggestions (Visible by default or when changing) -->
+  <div id="gp-search-panel" class="gp-search-panel">
+    <div class="gp-input-wrapper">
+      <input
+        type="text"
+        id="gp-search-input"
+        class="gp-search-input"
+        placeholder="Type city or town (e.g. Colombo, London, Tokyo)..."
+        autocomplete="off"
+        spellcheck="false"
+      />
+      <div id="gp-spinner" class="gp-spinner" style="display: none;"></div>
+      <button id="gp-clear-btn" class="gp-clear-btn" style="display: none;" title="Clear search">✕</button>
+    </div>
+
+    <!-- Dropdown Suggestions Menu -->
+    <ul id="gp-suggestions-list" class="gp-suggestions" style="display: none;"></ul>
+
+    <!-- Messages -->
+    <div id="gp-msg" class="gp-msg" style="display: none;"></div>
+  </div>
+
+  <div class="gp-footer-info">
+    <span>Powers local solar timing, humidity indices, and Open-Meteo rain forecasts.</span>
+  </div>
+</div>
+
+<style>
+  .gp-location-container {
+    background: linear-gradient(135deg, rgba(15, 23, 42, 0.85) 0%, rgba(30, 41, 59, 0.90) 100%);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 14px;
+    padding: 18px 20px;
+    color: #f8fafc;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
+    max-width: 100%;
+    box-sizing: border-box;
+    position: relative;
+  }
+
+  .gp-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 14px;
+  }
+
+  .gp-title-wrap {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .gp-icon {
+    font-size: 1.25rem;
+  }
+
+  .gp-title {
+    margin: 0;
+    font-size: 1.05rem;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+    color: #f1f5f9;
+  }
+
+  .gp-badge {
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    padding: 3px 9px;
+    border-radius: 9999px;
+    transition: all 0.25s ease;
+  }
+
+  .gp-badge-idle {
+    background: rgba(148, 163, 184, 0.15);
+    color: #94a3b8;
+    border: 1px solid rgba(148, 163, 184, 0.25);
+  }
+
+  .gp-badge-saved {
+    background: rgba(16, 185, 129, 0.18);
+    color: #34d399;
+    border: 1px solid rgba(16, 185, 129, 0.35);
+  }
+
+  .gp-badge-searching {
+    background: rgba(59, 130, 246, 0.18);
+    color: #60a5fa;
+    border: 1px solid rgba(59, 130, 246, 0.35);
+  }
+
+  .gp-selected-card {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: rgba(16, 185, 129, 0.08);
+    border: 1px solid rgba(16, 185, 129, 0.25);
+    border-radius: 10px;
+    padding: 12px 14px;
+    margin-bottom: 12px;
+    animation: fadeIn 0.3s ease-in-out;
+  }
+
+  .gp-card-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .gp-loc-pin {
+    font-size: 1.4rem;
+  }
+
+  .gp-loc-name {
+    font-size: 0.96rem;
+    font-weight: 600;
+    color: #ecfdf5;
+  }
+
+  .gp-loc-coords {
+    font-size: 0.78rem;
+    color: #6ee7b7;
+    margin-top: 2px;
+    font-family: monospace;
+  }
+
+  .gp-btn-change {
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    color: #cbd5e1;
+    border-radius: 6px;
+    padding: 5px 12px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .gp-btn-change:hover {
+    background: rgba(255, 255, 255, 0.15);
+    color: #ffffff;
+    border-color: rgba(255, 255, 255, 0.3);
+  }
+
+  .gp-search-panel {
+    position: relative;
+  }
+
+  .gp-input-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+  }
+
+  .gp-search-input {
+    width: 100%;
+    background: rgba(15, 23, 42, 0.9);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 8px;
+    padding: 11px 40px 11px 14px;
+    color: #f8fafc;
+    font-size: 0.92rem;
+    outline: none;
+    transition: all 0.2s ease;
+    box-sizing: border-box;
+  }
+
+  .gp-search-input:focus {
+    border-color: #10b981;
+    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.2);
+    background: rgba(15, 23, 42, 1);
+  }
+
+  .gp-spinner {
+    position: absolute;
+    right: 14px;
+    width: 16px;
+    height: 16px;
+    border: 2px solid rgba(255, 255, 255, 0.15);
+    border-top: 2px solid #10b981;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+
+  .gp-clear-btn {
+    position: absolute;
+    right: 12px;
+    background: none;
+    border: none;
+    color: #94a3b8;
+    font-size: 0.9rem;
+    cursor: pointer;
+    padding: 4px;
+  }
+
+  .gp-clear-btn:hover {
+    color: #ffffff;
+  }
+
+  .gp-suggestions {
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    right: 0;
+    z-index: 999;
+    background: #0f172a;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: 8px;
+    margin: 0;
+    padding: 6px 0;
+    list-style: none;
+    max-height: 250px;
+    overflow-y: auto;
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.5);
+  }
+
+  .gp-suggestion-item {
+    padding: 10px 14px;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    transition: background 0.15s ease;
+  }
+
+  .gp-suggestion-item:last-child {
+    border-bottom: none;
+  }
+
+  .gp-suggestion-item:hover,
+  .gp-suggestion-item.gp-active {
+    background: rgba(16, 185, 129, 0.18);
+  }
+
+  .gp-sugg-name {
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: #f1f5f9;
+  }
+
+  .gp-sugg-sub {
+    font-size: 0.76rem;
+    color: #94a3b8;
+    margin-top: 2px;
+  }
+
+  .gp-sugg-code {
+    font-size: 0.72rem;
+    font-weight: 700;
+    background: rgba(255, 255, 255, 0.1);
+    padding: 2px 6px;
+    border-radius: 4px;
+    color: #cbd5e1;
+  }
+
+  .gp-msg {
+    margin-top: 8px;
+    font-size: 0.8rem;
+    color: #f87171;
+    padding: 6px 10px;
+    background: rgba(239, 68, 68, 0.1);
+    border-radius: 6px;
+    border: 1px solid rgba(239, 68, 68, 0.2);
+  }
+
+  .gp-footer-info {
+    margin-top: 12px;
+    font-size: 0.74rem;
+    color: #64748b;
+    line-height: 1.4;
+  }
+
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-4px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+</style>
+
+<script>
+  (function () {
+    const root = document.getElementById("gp-location-root");
+    if (!root) return;
+
+    const input = document.getElementById("gp-search-input");
+    const spinner = document.getElementById("gp-spinner");
+    const clearBtn = document.getElementById("gp-clear-btn");
+    const list = document.getElementById("gp-suggestions-list");
+    const msg = document.getElementById("gp-msg");
+    const badge = document.getElementById("gp-status-badge");
+    const selectedCard = document.getElementById("gp-selected-card");
+    const selectedName = document.getElementById("gp-selected-name");
+    const selectedCoords = document.getElementById("gp-selected-coords");
+    const btnChange = document.getElementById("gp-btn-change");
+    const searchPanel = document.getElementById("gp-search-panel");
+
+    let debounceTimer = null;
+    let abortController = null;
+    let currentResults = [];
+    let activeIndex = -1;
+    let selectedLocation = null;
+
+    // Node-RED Dashboard 2.0 message listener
+    if (typeof this !== "undefined" && this.on) {
+      this.on("input", function (msg) {
+        if (!msg || !msg.payload) return;
+        let payload = msg.payload;
+        if (typeof payload === "string") {
+          try {
+            payload = JSON.parse(payload);
+          } catch (e) {
+            return;
+          }
+        }
+        if (payload.latitude && payload.longitude) {
+          applySelectedLocation(payload, false);
+        }
+      });
+    }
+
+    // Also support global window MQTT event if Node-RED wires state
+    window.addEventListener("greenpulse-location-resolved", function (e) {
+      if (e.detail) applySelectedLocation(e.detail, false);
+    });
+
+    btnChange.addEventListener("click", function () {
+      selectedCard.style.display = "none";
+      searchPanel.style.display = "block";
+      input.focus();
+      input.select();
+    });
+
+    clearBtn.addEventListener("click", function () {
+      input.value = "";
+      clearBtn.style.display = "none";
+      closeDropdown();
+      input.focus();
+    });
+
+    input.addEventListener("input", function () {
+      const val = input.value.trim();
+      clearBtn.style.display = val ? "block" : "none";
+
+      if (debounceTimer) clearTimeout(debounceTimer);
+      if (abortController) {
+        abortController.abort();
+        abortController = null;
+      }
+
+      if (val.length < 3) {
+        closeDropdown();
+        hideSpinner();
+        return;
+      }
+
+      showSpinner();
+      setBadge("Searching", "gp-badge-searching");
+
+      debounceTimer = setTimeout(() => {
+        performSearch(val);
+      }, 400);
+    });
+
+    input.addEventListener("keydown", function (e) {
+      const items = list.querySelectorAll(".gp-suggestion-item");
+      if (!items.length) return;
+
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        activeIndex = (activeIndex + 1) % items.length;
+        updateActiveItem(items);
+      } else if (e.key === "ArrowUp") {
+        e.preventDefault();
+        activeIndex = (activeIndex - 1 + items.length) % items.length;
+        updateActiveItem(items);
+      } else if (e.key === "Enter") {
+        e.preventDefault();
+        if (activeIndex >= 0 && activeIndex < currentResults.length) {
+          selectItem(currentResults[activeIndex]);
+        }
+      } else if (e.key === "Escape") {
+        closeDropdown();
+      }
+    });
+
+    document.addEventListener("click", function (e) {
+      if (!root.contains(e.target)) {
+        closeDropdown();
+      }
+    });
+
+    function performSearch(query) {
+      abortController = new AbortController();
+      const url = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(
+        query
+      )}&count=8&language=en&format=json`;
+
+      fetch(url, { signal: abortController.signal })
+        .then((res) => {
+          if (!res.ok) throw new Error("Search service error (" + res.status + ")");
+          return res.json();
+        })
+        .then((data) => {
+          hideSpinner();
+          currentResults = data.results || [];
+          activeIndex = -1;
+          renderSuggestions(currentResults);
+        })
+        .catch((err) => {
+          if (err.name === "AbortError") return;
+          hideSpinner();
+          showError("Unable to fetch locations. Please check connection.");
+          setBadge("Error", "gp-badge-idle");
+        });
+    }
+
+    function renderSuggestions(results) {
+      list.innerHTML = "";
+      hideMsg();
+
+      if (!results || results.length === 0) {
+        showError("No matching locations found worldwide.");
+        closeDropdown();
+        setBadge("Ready", "gp-badge-idle");
+        return;
+      }
+
+      results.forEach((item, idx) => {
+        const li = document.createElement("li");
+        li.className = "gp-suggestion-item";
+        li.dataset.index = idx;
+
+        const left = document.createElement("div");
+        const nameDiv = document.createElement("div");
+        nameDiv.className = "gp-sugg-name";
+        nameDiv.textContent = item.name;
+
+        const subDiv = document.createElement("div");
+        subDiv.className = "gp-sugg-sub";
+        const parts = [];
+        if (item.admin1 && item.admin1 !== item.name) parts.push(item.admin1);
+        if (item.country) parts.push(item.country);
+        subDiv.textContent = parts.join(", ") || "Global";
+
+        left.appendChild(nameDiv);
+        left.appendChild(subDiv);
+        li.appendChild(left);
+
+        if (item.country_code) {
+          const codeSpan = document.createElement("span");
+          codeSpan.className = "gp-sugg-code";
+          codeSpan.textContent = item.country_code;
+          li.appendChild(codeSpan);
+        }
+
+        li.addEventListener("click", () => {
+          selectItem(item);
+        });
+
+        list.appendChild(li);
+      });
+
+      list.style.display = "block";
+    }
+
+    function updateActiveItem(items) {
+      items.forEach((it, idx) => {
+        if (idx === activeIndex) {
+          it.classList.add("gp-active");
+          it.scrollIntoView({ block: "nearest" });
+        } else {
+          it.classList.remove("gp-active");
+        }
+      });
+    }
+
+    function selectItem(item) {
+      closeDropdown();
+      const parts = [item.name];
+      if (item.admin1 && item.admin1 !== item.name) parts.push(item.admin1);
+      if (item.country) parts.push(item.country);
+      const displayName = parts.join(", ");
+
+      const payload = {
+        device_id: "device01",
+        location_name: displayName,
+        admin1: item.admin1 || null,
+        country: item.country || null,
+        country_code: item.country_code || null,
+        geocoding_id: item.id || null,
+        latitude: parseFloat(item.latitude),
+        longitude: parseFloat(item.longitude),
+      };
+
+      applySelectedLocation(payload, true);
+    }
+
+    function applySelectedLocation(payload, sendToMqtt) {
+      if (!payload || !payload.latitude || !payload.longitude) return;
+
+      // Validate coordinates are not Null Island
+      if (Math.abs(payload.latitude) < 0.0001 && Math.abs(payload.longitude) < 0.0001) {
+        showError("Invalid placeholder coordinates rejected.");
+        return;
+      }
+
+      selectedLocation = payload;
+      selectedName.textContent = payload.location_name || `${payload.latitude.toFixed(4)}, ${payload.longitude.toFixed(4)}`;
+      selectedCoords.textContent = `Lat: ${Number(payload.latitude).toFixed(4)}°, Lon: ${Number(payload.longitude).toFixed(4)}°`;
+
+      searchPanel.style.display = "none";
+      selectedCard.style.display = "flex";
+      setBadge("Confirmed", "gp-badge-saved");
+
+      if (sendToMqtt && typeof scope !== "undefined" && scope.send) {
+        scope.send({
+          topic: "greenpulse/device01/location",
+          payload: payload,
+        });
+      } else if (sendToMqtt && typeof this !== "undefined" && this.send) {
+        this.send({
+          topic: "greenpulse/device01/location",
+          payload: payload,
+        });
+      }
+    }
+
+    function setBadge(text, cls) {
+      badge.textContent = text;
+      badge.className = "gp-badge " + cls;
+    }
+
+    function showSpinner() {
+      spinner.style.display = "block";
+    }
+
+    function hideSpinner() {
+      spinner.style.display = "none";
+    }
+
+    function closeDropdown() {
+      list.style.display = "none";
+      list.innerHTML = "";
+    }
+
+    function showError(text) {
+      msg.textContent = text;
+      msg.style.display = "block";
+      setTimeout(hideMsg, 4000);
+    }
+
+    function hideMsg() {
+      msg.style.display = "none";
+    }
+  })();
+</script>
